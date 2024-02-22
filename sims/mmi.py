@@ -35,7 +35,7 @@ class mmi1x2:
         #simulate gds to get s_parameters
         s = lumapi.FDTD(hide=True, remoteArgs=remoteArgs)
 
-        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, wavelength_points=15, wavelength_start=1.1, wavelength_stop=1.3)
+        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, wavelength_points=5, wavelength_start=1.4, wavelength_stop=1.6)
         #check specs related to s_parameters
 
         with open('sim2.pk1','wb') as file: pickle.dump(a,file)

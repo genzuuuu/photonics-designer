@@ -8,7 +8,7 @@ import gdsfactory as gf
 from gdsfactory.generic_tech import LAYER_STACK, get_generic_pdk
 
 import gplugins.lumerical as sim
-
+import sqlite3
 import re
 import math
 
@@ -33,7 +33,17 @@ class mmi1x2:
         ) 
 
         self.component = None
-        
+        self.num_port = 3
+        self.sparam = None
+
+        self.mmiid = None
+        self.Width_MMI = 3.8 
+        self.Length_MMI = 12.8  
+        self.Gap_MMI = 0.25 
+        self.Taper_Length = 10 
+        self.Taper_Width = 1.4  
+
+
         #check if an unacceptable parameter is passed in
         for settings in kwargs:
             if settings not in self.parameters:
@@ -59,70 +69,62 @@ class mmi1x2:
 
     def run(self):
         #ok checks
-        
         #simulate gds to get s_parameters
         s = lumapi.FDTD(hide=True, remoteArgs=remoteArgs)
 
         a = sim.write_sparameters_lumerical(self.component, run=True, session=s, **self.parameters)
         #check specs related to s_parameters
-
+        
         with open('sim2.pk1','wb') as file: pickle.dump(a,file)
 
+        # get S parameters from the simulation
+        sp = s.getsweepresult("s-parameter sweep", "S parameters")
         #check if design is ok
     
 
-    def process_line(line):
-        #Check if line starts with special characters
-        if re.match(r'^[\[\(]', line):
-            return None
-        else:
-            # Split the line into numbers
-            numbers = [float(num) for num in line.split()]
-            return numbers
 
-    def splitting_ratio_insertion_loss(filename, num_simulation):
-        # filename: file path to the .dat file 
+    def splitting_ratio_insertion_loss(self):
         # num_simulation: number of simulations
         # return: insertion_loss, splitting_ratio
-        data = []
-        with open(filename, 'r') as file:
-            for line in file:
-                line = line.strip()
-                processed_line = process_line(line)
-                if processed_line is not None:
-                    data.append(processed_line)
-        
-        # Split the original array into chunks of arrays each, depending on the number of simulation
-        chunks = [data[i:i + num_simulation] for i in range(0, len(data), num_simulation)]
-
-        # Assign each chunk to a new variable
-        for i, chunk in enumerate(chunks, 1):
-            globals()[f"result_{i}"] = chunk
-
-        # Print the newly created variables
-        num_s_parameter = int(len(data)/num_simulation)
-        for i in range(1, num_s_parameter+1):
-            f"result_{i}: {globals()[f'result_{i}']}" # S11, S12 ... S33
-
-        T2 = []
-        T3 = []
+        num_simulation = self.wavelength_points
         insertion_loss = []
         splitting_ratio = []
-
-        for x in range(num_simulation):
-            T2_temp = result_4[x][1]
-            T3_temp = result_7[x][1]
-            T2.append(T2_temp)
-            T3.append(T3_temp)
-            insertion_loss.append([result_4[x][0],10*math.log10(T3_temp+T2_temp)])
-            splitting_ratio.append([result_4[x][0],-10*math.log10(max(T2_temp,T3_temp)/min(T2_temp,T3_temp))])
+        for x in range(num_simulation):     
+            T2_temp = abs(self.sparam['S21'][x])
+            T3_temp = abs(self.sparam['S31'][x])
+            insertion_loss.append([self.sparam['lambda'][x][0],10*math.log10(T3_temp+T2_temp)])
+            splitting_ratio.append([self.sparam['lambda'][x][0],-10*math.log10(max(T2_temp,T3_temp)/min(T2_temp,T3_temp))])
 
             data_1 = {"insertion loss":[], "splitting ratio":[]}
             data_1.update({"insertion loss": insertion_loss, "splitting ratio": splitting_ratio})
 
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
-            return data_1
+        return data_1
         
+    def insert_into_database(self, file_path, database_path): 
+        
+        conn = sqlite3.connect(database_path)
+        print("[INFO] : Successful connection!")
+
+        # reads the biggest number of MMIID 
+        cur = conn.cursor()
+        sql_insert_file_query = '''SELECT MAX(MMIID) FROM MMI'''
+        cur.execute(sql_insert_file_query)
+        MMIID = cur.fetchall()[0][0]
+        MMIID += 1
+        self.mmiid = MMIID
+
+        # insert .dat file path along with MMI specs into MMI table into a new row
+        sql_insert_file_query = '''INSERT INTO MMI(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper,  FilePath)
+        VALUES(?,?,?,?,?,?,?)'''
+        cur = conn.cursor()
+        cur.execute(sql_insert_file_query, (MMIID, self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width, file_path))
+        conn.commit()
+        print("[INFO] : ", file_path, "is in the database.") 
+        print("[INFO] : This is entry number:", self.mmiid) 
+        
+
+
 
 ##
 if __name__ == '__main__':

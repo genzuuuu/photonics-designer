@@ -1,4 +1,4 @@
-#import license
+import license as license
 import lumapi
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,16 +12,41 @@ import gplugins.lumerical as sim
 import re
 import math
 
-#remoteArgs = { "hostname": license.hostname,"port": license.port }
+remoteArgs = { "hostname": license.hostname,"port": license.port }
 
 class mmi1x2:
-    component = None
-    parameters = None
 
-    def __init__(self,parameters: dict):
-        self.parameters = parameters
+
+    component = None
+
+    def __init__(self,**kwargs):
+
+        #defaults    
+        self.parameters = dict(
+            background_material = "sio2",
+            port_margin = 1.5,
+            port_extension = 5.0,
+            mesh_accuracy = 1.5,
+            wavelength_start = 1.4,
+            wavelength_stop = 1.6,
+            wavelength_points = 5,
+        ) 
+
         self.component = None
-        #search database for design
+        
+        #check if an unacceptable parameter is passed in
+        for settings in kwargs:
+            if settings not in self.parameters:
+                raise ValueError(
+                    f"Invalid setting: {settings})"
+                )   
+
+        #update parameters
+        self.parameters.update(kwargs)
+        self.__dict__.update(self.parameters)
+        print(self.parameters)
+        #TODO
+        #search database for design 
     
     def draw_gds(self):
 
@@ -38,7 +63,7 @@ class mmi1x2:
         #simulate gds to get s_parameters
         s = lumapi.FDTD(hide=True, remoteArgs=remoteArgs)
 
-        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, wavelength_points=5, wavelength_start=1.4, wavelength_stop=1.6)
+        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, **self.parameters)
         #check specs related to s_parameters
 
         with open('sim2.pk1','wb') as file: pickle.dump(a,file)
@@ -47,13 +72,13 @@ class mmi1x2:
     
 
     def process_line(line):
-    # Check if line starts with special characters
-    if re.match(r'^[\[\(]', line):
-        return None
-    else:
-        # Split the line into numbers
-        numbers = [float(num) for num in line.split()]
-        return numbers
+        #Check if line starts with special characters
+        if re.match(r'^[\[\(]', line):
+            return None
+        else:
+            # Split the line into numbers
+            numbers = [float(num) for num in line.split()]
+            return numbers
 
     def splitting_ratio_insertion_loss(filename, num_simulation):
         # filename: file path to the .dat file 
@@ -84,15 +109,23 @@ class mmi1x2:
         splitting_ratio = []
 
         for x in range(6):
-        T2_temp = result_4[x][1]
-        T3_temp = result_7[x][1]
-        T2.append(T2_temp)
-        T3.append(T3_temp)
-        insertion_loss.append([result_4[x][0],10*math.log10(T3_temp+T2_temp)])
-        splitting_ratio.append([result_4[x][0],-10*math.log10(max(T2_temp,T3_temp)/min(T2_temp,T3_temp))])
+            T2_temp = result_4[x][1]
+            T3_temp = result_7[x][1]
+            T2.append(T2_temp)
+            T3.append(T3_temp)
+            insertion_loss.append([result_4[x][0],10*math.log10(T3_temp+T2_temp)])
+            splitting_ratio.append([result_4[x][0],-10*math.log10(max(T2_temp,T3_temp)/min(T2_temp,T3_temp))])
 
-        data_1 = {"insertion loss":[], "splitting ratio":[]}
-        data_1.update({"insertion loss": insertion_loss, "splitting ratio": splitting_ratio})
+            data_1 = {"insertion loss":[], "splitting ratio":[]}
+            data_1.update({"insertion loss": insertion_loss, "splitting ratio": splitting_ratio})
 
-        # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
-        return data_1
+            # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
+            return data_1
+        
+
+##
+if __name__ == '__main__':
+    #running of an example
+    c = mmi1x2(wavelength_points=10, mesh_accuracy=2)
+    c.draw_gds()
+    c.run()

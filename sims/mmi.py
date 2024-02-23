@@ -35,6 +35,7 @@ class mmi1x2:
         self.component = None
         self.num_port = 3
         self.sparam = None
+        self.IL_SR = None
 
         self.mmiid = None
         self.Width_MMI = 3.8 
@@ -43,6 +44,13 @@ class mmi1x2:
         self.Taper_Length = 10 
         self.Taper_Width = 1.4  
 
+        self.center_wavelength = None
+        self.start_bandwidth = None
+        self.stop_bandwidth = None
+        self.mean_IL = None
+        self.mean_sr = None
+        self.IL_center = None
+        self.SR_center = None
 
         #check if an unacceptable parameter is passed in
         for settings in kwargs:
@@ -73,12 +81,13 @@ class mmi1x2:
         s = lumapi.FDTD(hide=True, remoteArgs=remoteArgs)
 
         a = sim.write_sparameters_lumerical(self.component, run=True, session=s, **self.parameters)
+        
         #check specs related to s_parameters
         
         with open('sim2.pk1','wb') as file: pickle.dump(a,file)
 
         # get S parameters from the simulation
-        sp = s.getsweepresult("s-parameter sweep", "S parameters")
+        self.sparam = s.getsweepresult("s-parameter sweep", "S parameters")
         #check if design is ok
     
 
@@ -86,12 +95,12 @@ class mmi1x2:
     def splitting_ratio_insertion_loss(self):
         # num_simulation: number of simulations
         # return: insertion_loss, splitting_ratio
-        num_simulation = self.wavelength_points
+        num_simulation = self.parameters['wavelength_points']
         insertion_loss = []
         splitting_ratio = []
         for x in range(num_simulation):     
-            T2_temp = abs(self.sparam['S21'][x])
-            T3_temp = abs(self.sparam['S31'][x])
+            T2_temp = abs(self.sparam['S21'][x])*abs(self.sparam['S21'][x])
+            T3_temp = abs(self.sparam['S31'][x])*abs(self.sparam['S31'][x])
             insertion_loss.append([self.sparam['lambda'][x][0],10*math.log10(T3_temp+T2_temp)])
             splitting_ratio.append([self.sparam['lambda'][x][0],-10*math.log10(max(T2_temp,T3_temp)/min(T2_temp,T3_temp))])
 
@@ -99,7 +108,7 @@ class mmi1x2:
             data_1.update({"insertion loss": insertion_loss, "splitting ratio": splitting_ratio})
 
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
-        return data_1
+        self.IL_SR = data_1
         
     def insert_into_database(self, file_path, database_path): 
         
@@ -111,20 +120,54 @@ class mmi1x2:
         sql_insert_file_query = '''SELECT MAX(MMIID) FROM MMI'''
         cur.execute(sql_insert_file_query)
         MMIID = cur.fetchall()[0][0]
-        MMIID += 1
+        if (MMIID == None): 
+            MMIID = 0
+        else: 
+            MMIID += 1
         self.mmiid = MMIID
+        
+        # find center wavelength
+        temp = 1 / ( 2 * (self.IL_SR['insertion loss'][0][1]+self.IL_SR['splitting ratio'][0][1] ) )
+        # print(temp)
+        for i in range(self.parameters['wavelength_points']):
+            if (  temp <= (1 / ( 2 * (self.IL_SR['insertion loss'][i][1]+self.IL_SR['splitting ratio'][i][1] ) ))   ):
+                self.center_wavelength = self.IL_SR['insertion loss'][i][0]
+                self.IL_center = self.IL_SR['insertion loss'][i][1]
+                self.SR_center = self.IL_SR['splitting ratio'][i][1]
+                temp = 1 / ( 2 * (self.IL_SR['insertion loss'][i][1]+self.IL_SR['splitting ratio'][i][1] ) )
+
+        # find bandwidth
+        for i in range(self.parameters['wavelength_points']):
+            if (self.IL_SR['insertion loss'][i][1]>-0.5 and self.IL_SR['splitting ratio'][i][1]>-0.25):
+                if (self.stop_bandwidth is None):
+                    self.stop_bandwidth = self.IL_SR['insertion loss'][i][0]
+                self.start_bandwidth = self.IL_SR['insertion loss'][i][0]
+
+        # find mean IL & mean SR
+
+        data_subset_IL = []
+        data_subset_SR = []
+        if (self.start_bandwidth is None or self.stop_bandwidth is None):
+            self.mean_IL = None
+            self.mean_sr = None
+        else: 
+            for i in range(self.parameters['wavelength_points']):
+                if (self.IL_SR['insertion loss'][i][0] <= self.stop_bandwidth and self.IL_SR['insertion loss'][i][0] >= self.start_bandwidth ):
+                    data_subset_IL.append(self.IL_SR['insertion loss'][i][1])
+                    data_subset_SR.append(self.IL_SR['splitting ratio'][i][1])
+            self.mean_IL = sum(data_subset_IL)/len(data_subset_IL)
+            self.mean_SR = sum(data_subset_SR)/len(data_subset_SR)    
+
 
         # insert .dat file path along with MMI specs into MMI table into a new row
-        sql_insert_file_query = '''INSERT INTO MMI(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper,  FilePath)
-        VALUES(?,?,?,?,?,?,?)'''
+        sql_insert_file_query = '''INSERT INTO MMI(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter  FilePath)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
         cur = conn.cursor()
-        cur.execute(sql_insert_file_query, (MMIID, self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width, file_path))
+        cur.execute(sql_insert_file_query, (MMIID, self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width,self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_sr, self.IL_center, self.SR_center,  file_path))
         conn.commit()
         print("[INFO] : ", file_path, "is in the database.") 
         print("[INFO] : This is entry number:", self.mmiid) 
         
-
-
 
 ##
 if __name__ == '__main__':

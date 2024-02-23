@@ -92,7 +92,7 @@ class mmi1x2:
                 if processed_line is not None:
                     data.append(processed_line)
         
-        # Split the original array into chunks of 6 arrays each
+        # Split the original array into chunks of arrays each, depending on the number of simulation
         chunks = [data[i:i + num_simulation] for i in range(0, len(data), num_simulation)]
 
         # Assign each chunk to a new variable
@@ -100,15 +100,16 @@ class mmi1x2:
             globals()[f"result_{i}"] = chunk
 
         # Print the newly created variables
-        for i in range(1, 10):
-            print(f"result_{i}: {globals()[f'result_{i}']}") # S11, S12 ... S33
+        num_s_parameter = int(len(data)/num_simulation)
+        for i in range(1, num_s_parameter+1):
+            f"result_{i}: {globals()[f'result_{i}']}" # S11, S12 ... S33
 
         T2 = []
         T3 = []
         insertion_loss = []
         splitting_ratio = []
 
-        for x in range(6):
+        for x in range(num_simulation):
             T2_temp = result_4[x][1]
             T3_temp = result_7[x][1]
             T2.append(T2_temp)

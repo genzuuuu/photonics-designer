@@ -1,0 +1,108 @@
+0:
+    name: splitter_50_50
+    description: |
+        this is a balanced splitter.
+        the splitting ratio is 50/50.
+        the input optical power from either of the input ports splits into the two output ports with a 50/50 ratio.
+        it is based on an MMI interferometer.
+        it is designed for telecom c-band.
+    number_of_input_ports: 2
+    number_of_output_ports: 2
+    x_y_size_µm: [15, 3]
+    yaml_code: |
+        component: mmi2x2
+        settings:
+            width_taper: 1
+            length_taper: 5
+            length_mmi: 5
+            width_mmi: 2.5
+            gap_mmi: 0.50
+
+1:
+    name: splitter_90_10
+    description: |
+        this is an unbalanced splitter.
+        the splitting ratio is 90/10.
+        the input optical power from either of the input ports splits into the two output ports with a 90/10 ratio.
+        it is based on an MMI interferometer.
+        it is designed for telecom c-band.
+    number_of_input_ports: 2
+    number_of_output_ports: 2
+    x_y_size_µm: [13, 3]
+    yaml_code: |
+        component: mmi2x2
+        settings:
+            width_taper: 1
+            length_taper: 5
+            length_mmi: 2.5
+            width_mmi: 2.5
+            gap_mmi: 0.50
+
+2:
+    name: grating_coupler_elliptical
+    description: |
+        this is a grating coupler.
+        it has an ellicpical desgin.
+        it is designed to couple light between the chip and single-mode c-band optical fibers, with flat polished facets.
+    number_of_input_ports: 1
+    number_of_output_ports: 0
+    x_y_size_µm: [41, 27]
+    yaml_code: |
+        component: grating_coupler_elliptical
+        settings:
+            polarization: 'te'
+            taper_length: 16.6
+
+3:
+    name: ring_resonator_single
+    description: |
+        this is a single ring resonator coupled to a bus waveguide, only from one side.
+        it is designed to take light from the bus waveguide at the resonant frequencies.
+        The coupling between the bus waveguide and the ring is designed to provide a critically coupled condition at the wavelength of 1550 nm.
+    number_of_input_ports: 1
+    number_of_output_ports: 1
+    x_y_size_µm: [50, 43]
+    yaml_code: |
+        component: ring_single
+        settings:
+            gap: 0.5
+            radius: 20
+            length_x: 4
+            length_y: 1
+
+4:
+    name: spiral
+    description: |
+        this is a long meandering waveguide with a double spiral shape.
+        it can be used as a delay line or to characterize the light propagation loss.
+        it is designed for telecom c-band.
+    number_of_input_ports: 1
+    number_of_output_ports: 1
+    x_y_size_µm: [60, 61]
+    yaml_code: |
+        component: spiral_double
+        settings:
+            min_bend_radius: 10
+            separation: 2
+            number_of_loops: 5
+            npoints: 1000
+
+5:
+    name: green_splitter_50_50
+    description: |
+        this is a balanced splitter.
+        the splitting ratio is 50/50.
+        the input optical power send to either of the input ports splits into the two output ports with a 50/50 ratio.
+        it is based on an MMI interferometer.
+        it is designed for green light, corresponding to wavelength range of 500 nm to 570 nm.
+    number_of_input_ports: 2
+    number_of_output_ports: 2
+    x_y_size_µm: [15, 3]
+    yaml_code: |
+        component: mmi2x2
+        settings:
+            width_taper: 1
+            length_taper: 4.5
+            length_mmi: 5
+            width_mmi: 2.5
+            gap_mmi: 0.50

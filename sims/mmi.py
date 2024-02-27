@@ -11,6 +11,7 @@ import gplugins.lumerical as sim
 import sqlite3
 import re
 import math
+import spicy
 
 remoteArgs = { "hostname": license.hostname,"port": license.port }
 
@@ -194,17 +195,8 @@ class mmi1x2:
         print("[INFO] : Entry modified")
 
 
-
-##
-if __name__ == '__main__':
-    #running of an example
-    c = mmi1x2(wavelength_points=5, mesh_accuracy=2, Length_MMI = 12.8 , Gap_MMI = 0.25)
-    c.draw_gds()
-    c.run()
-
-
 def fitness_function(input_param):
-    # input_param[0] = length mmi, input_param[1] = gap mmi
+    # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
     
     # draw gds
     gf.config.rich_output()
@@ -240,3 +232,18 @@ def fitness_function(input_param):
     mean_IL = sum(insertion_loss)/len(insertion_loss)
 
     return mean_IL
+
+##
+if __name__ == '__main__':
+    #running of an example
+    c = mmi1x2(wavelength_points=5, mesh_accuracy=2, Length_MMI = 12.8 , Gap_MMI = 0.25)
+    c.draw_gds()
+    c.run()
+
+    # trying optimization function
+    res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
+    print(res)
+
+
+
+

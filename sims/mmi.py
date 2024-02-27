@@ -192,9 +192,51 @@ class mmi1x2:
         cur.execute(sql_edit_query, (self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width,self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.file_path, self.mmiid))
         conn.commit()
         print("[INFO] : Entry modified")
+
+
+
 ##
 if __name__ == '__main__':
     #running of an example
-    c = mmi1x2(wavelength_points=10, mesh_accuracy=2)
+    c = mmi1x2(wavelength_points=5, mesh_accuracy=2, Length_MMI = 12.8 , Gap_MMI = 0.25)
     c.draw_gds()
     c.run()
+
+
+def fitness_function(input_param):
+    # input_param[0] = length mmi, input_param[1] = gap mmi
+    
+    # draw gds
+    gf.config.rich_output()
+    PDK = get_generic_pdk()
+    PDK.activate()
+
+    #change such that it takes in some of the parameter values
+    component = gf.components.cells["mmi1x2"](length_mmi=input_param[0], gap_mmi=input_param[1],width_mmi=2.5, length_taper=10.0, width_taper=1.0)
+
+
+
+    # run simulation
+    #simulate gds to get s_parameters
+    s = lumapi.FDTD(hide=True)
+
+    a = sim.write_sparameters_lumerical(component, run=True, session=s)
+    
+    #check specs related to s_parameters
+    
+
+    # get S parameters from the simulation
+    sparam = s.getsweepresult("s-parameter sweep", "S parameters")
+    print(sparam)
+
+    # calculate mean insertion loss
+    insertion_loss = []
+    for x in range(500):     
+        T2_temp = abs(sparam['S21'][x])*abs(sparam['S21'][x])
+        T3_temp = abs(sparam['S31'][x])*abs(sparam['S31'][x])
+        insertion_loss.append(10*math.log10(T3_temp+T2_temp))
+    print(insertion_loss)
+
+    mean_IL = sum(insertion_loss)/len(insertion_loss)
+
+    return mean_IL

@@ -1,8 +1,21 @@
-import license as license
-import lumapi
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+
+#import lumapi
+
+
+
+#import lumapi on MPI computers
+import sys, os
+sys.path.append("C:\\Program Files\\Lumerical\\v211\\api\\python\\") 
+sys.path.append(os.path.dirname(__file__)) #Current directory
+
+#import importlib.util
+#spec_win = importlib.util.spec_from_file_location('lumapi', 'C:\\Program Files\\Lumerical\\v211\\api\\python\\lumapi.py')
+#lumapi = importlib.util.module_from_spec(spec_win) #windows
+#spec_win.loader.exec_module(lumapi)
+import lumapi
 
 import gdsfactory as gf
 from gdsfactory.generic_tech import LAYER_STACK, get_generic_pdk
@@ -13,7 +26,6 @@ import re
 import math
 import spicy
 
-remoteArgs = { "hostname": license.hostname,"port": license.port }
 
 class mmi1x2:
 
@@ -21,7 +33,7 @@ class mmi1x2:
     component = None
 
     def __init__(self,**kwargs):
-
+        
         #defaults    
         self.parameters = dict(
             background_material = "sio2",
@@ -31,6 +43,10 @@ class mmi1x2:
             wavelength_start = 1.4,
             wavelength_stop = 1.6,
             wavelength_points = 5,
+            xmargin = 1,
+            ymargin = 1,
+            zmargin = 1,
+            overwrite=True,
         ) 
 
         self.component = None
@@ -70,28 +86,28 @@ class mmi1x2:
     
     def draw_gds(self):
 
-        gf.config.rich_output()
+        #gf.config.rich_output()
         PDK = get_generic_pdk()
         PDK.activate()
 
         #change such that it takes in some of the parameter values
         self.component = gf.components.cells["mmi1x2"]()
 
-    def run(self):
+    def run(self, fname, dirpath=None):
         #ok checks
         #simulate gds to get s_parameters
-        s = lumapi.FDTD(hide=True, remoteArgs=remoteArgs)
+        s = lumapi.FDTD(hide=True)
 
-        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, **self.parameters)
+        a = sim.write_sparameters_lumerical(self.component, run=True, session=s, dirpath=dirpath,  **self.parameters)
         
         #check specs related to s_parameters
         
-        with open('sim2.pk1','wb') as file: pickle.dump(a,file)
-
+        with open(fname,'wb') as file: pickle.dump(a,file)
+        
         # get S parameters from the simulation
         self.sparam = s.getsweepresult("s-parameter sweep", "S parameters")
+        #print(self.sparam)
         #check if design is ok
-    
 
 
     def splitting_ratio_insertion_loss(self):
@@ -101,6 +117,7 @@ class mmi1x2:
         insertion_loss = []
         splitting_ratio = []
         for x in range(num_simulation):     
+            print(self.sparam['S21'][x])
             T2_temp = abs(self.sparam['S21'][x])*abs(self.sparam['S21'][x])
             T3_temp = abs(self.sparam['S31'][x])*abs(self.sparam['S31'][x])
             insertion_loss.append([self.sparam['lambda'][x][0],10*math.log10(T3_temp+T2_temp)])
@@ -110,6 +127,7 @@ class mmi1x2:
             data_1.update({"insertion loss": insertion_loss, "splitting ratio": splitting_ratio})
 
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
+        print(data_1)
         self.IL_SR = data_1
         
     def insert_into_database(self, file_path, database_path): 
@@ -199,7 +217,6 @@ def fitness_function(input_param):
     # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
     
     # draw gds
-    gf.config.rich_output()
     PDK = get_generic_pdk()
     PDK.activate()
 
@@ -236,14 +253,16 @@ def fitness_function(input_param):
 ##
 if __name__ == '__main__':
     #running of an example
-    c = mmi1x2(wavelength_points=5, mesh_accuracy=2, Length_MMI = 12.8 , Gap_MMI = 0.25)
-    c.draw_gds()
-    c.run()
+    
+
+    for mesh in range(12):
+        marg = 6
+        
+        c = mmi1x2(xmargin=marg, ymargin=marg, zmargin=marg, wavelength_points=5, mesh_accuracy=mesh+1, overwrite=False)#, Length_MMI = 12.8 , Gap_MMI = 0.25)
+        c.draw_gds()
+        c.run(fname=f"mesh{mesh+1}margin{marg}.pk1")
+        c.splitting_ratio_insertion_loss()
 
     # trying optimization function
-    res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
-    print(res)
-
-
-
-
+    #res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
+    #print(res)

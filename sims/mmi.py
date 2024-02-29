@@ -119,7 +119,7 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI'''
+        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI1x2'''
         cur.execute(sql_sel_max_query)
         MMIID = cur.fetchall()[0][0]
         if (MMIID == None): 
@@ -162,7 +162,7 @@ class mmi1x2:
 
         self.file_path = file_path
         # insert .dat file path along with MMI specs into MMI table into a new row
-        sql_insert_data_query = '''INSERT INTO MMI(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
+        sql_insert_data_query = '''INSERT INTO MMI1x2(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
         cur = conn.cursor()
         cur.execute(sql_insert_data_query, (MMIID, self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width,self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  file_path))
@@ -177,7 +177,7 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI WHERE %s>StartBandwidth and %s<StopBandwidth  ORDER BY ABS(CenterWavelength - %s) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
+        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE %s>StartBandwidth and %s<StopBandwidth  ORDER BY ABS(CenterWavelength - %s) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
         cur.execute(sql_insert_file_query, (center_wavelength))
         row = cur.fetchall()
         print("[INFO] : Successful Query!")

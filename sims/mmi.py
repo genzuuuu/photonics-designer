@@ -11,7 +11,7 @@ import gplugins.lumerical as sim
 import sqlite3
 import re
 import math
-import spicy
+import scipy
 
 remoteArgs = { "hostname": license.hostname,"port": license.port }
 
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     c.run()
 
     # trying optimization function
-    res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
+    res = scipy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
     print(res)
 
 

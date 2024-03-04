@@ -16,14 +16,20 @@ from gplugins.common.utils.get_sparameters_path import (
 from gdsfactory.pdk import get_layer_stack
 
 import gplugins.lumerical as sim
+from new_write_sparameters import write_sparameters_lumerical as WL
+
 import sqlite3
 import re
 import math
 import spicy
 
+
 class mmi1x2:
 
-    def __init__(self, Width_MMI = 3.8, Length_MMI=12.8, mmiid=None, Gap_MMI=0.25, Taper_Length=10, Taper_Width=1.4,**kwargs):
+
+    component = None
+
+    def __init__(self, Width_MMI = 3.8, Length_MMI=12.8, mmiid=None, Gap_MMI=0.25, Taper_Length=10, Taper_Width=1.4, count=0,**kwargs):
         
         #defaults    
         self.parameters = dict(
@@ -46,13 +52,14 @@ class mmi1x2:
         self.num_port = 3
         self.sparam = None
         self.IL_SR = None
-
+        
         self.mmiid = mmiid
         self.Width_MMI = Width_MMI
         self.Length_MMI = Length_MMI
         self.Gap_MMI = Gap_MMI
         self.Taper_Length = Taper_Length
         self.Taper_Width = Taper_Width
+        self.count=count
 
         self.center_wavelength = None
         self.start_bandwidth = None
@@ -93,7 +100,7 @@ class mmi1x2:
         #simulate gds to get s_parameters
         s = lumapi.FDTD(hide=True)
 
-        a = sim.write_sparameters_lumerical(self.component, run=True, session=s,  **self.parameters)
+        a = WL(self.component, run=True, session=s,  count=self.count, **self.parameters)
         
         # get S parameters from the simulation
         self.sparam = s.getsweepresult("s-parameter sweep", "S parameters")
@@ -258,41 +265,19 @@ def fitness_function(input_param):
 ##
 if __name__ == '__main__':
     #running of an example
-    #filepath = "C:\\Users\\cdoumbia\\Documents\\photonicsdesigner\\sims\\data\\mmi1x2\\mmi1x2_533af979379917b86f7c4ae7ba55821f.dat"
+    #filepath = ""
     databasepath = "./MMIDB.db"
-    dir_path = "C:\\Users\\cdoumbia\\Documents\\photonicsdesigner\\sims\\data"
+    dir_path = ""
     
+    #running an example
     c = mmi1x2(xmargin=1, ymargin=1, zmargin=1, 
                wavelength_points=5, mesh_accuracy=2, 
                overwrite=True, dirpath=dir_path, Width_MMI=3, 
-               Length_MMI=10, Gap_MMI=0.2, Taper_Length=8, 
-               Taper_Width=9)
+               Length_MMI=7, Gap_MMI=0.2, Taper_Length=8, 
+               Taper_Width=9,count=0)
     
     c.runall(database_path=databasepath)
-    
-    c = mmi1x2(xmargin=2, ymargin=2, zmargin=2, 
-               wavelength_points=10, mesh_accuracy=5, 
-               overwrite=True, dirpath=dir_path, Width_MMI=5, 
-               Length_MMI=15, Gap_MMI=0.5, Taper_Length=12, 
-               Taper_Width=9)
-    
-    c.runall(database_path=databasepath)
-    
-    c = mmi1x2(xmargin=2, ymargin=2, zmargin=2, 
-               wavelength_points=5, mesh_accuracy=4, 
-               overwrite=True, dirpath=dir_path, Width_MMI=4, 
-               Length_MMI=11, Gap_MMI=0.3, Taper_Length=9, 
-               Taper_Width=7)
-    
-    c.runall(database_path=databasepath)
-    
-    c = mmi1x2(xmargin=3, ymargin=3, zmargin=3, 
-               wavelength_points=5, mesh_accuracy=2, 
-               overwrite=True, dirpath=dir_path, Width_MMI=3, 
-               Length_MMI=13, Gap_MMI=0.2, Taper_Length=8, 
-               Taper_Width=10)
-    
-    c.runall(database_path=databasepath)
+
     
     # trying optimization function
     #res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')

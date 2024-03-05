@@ -25,7 +25,8 @@ import scipy
 
 
 class mmi1x2:
-    def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
+    def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, 
+                 mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
         #defaults    
         self.parameters = dict(
@@ -84,8 +85,8 @@ class mmi1x2:
         print(self.parameters)
         
         #search database for design
-        entry = self.search_database(center_wavelength=self.target_CW)
-        if entry != None: converged = True #insert database entry into mmi values
+        #entry = self.search_database(center_wavelength=self.target_CW)
+        #if entry != None: converged = True #insert database entry into mmi values
 
     
     def draw_gds(self):
@@ -196,7 +197,7 @@ class mmi1x2:
         print("[INFO] : ", file_path, "is in the database.") 
         print("[INFO] : This is entry number:", self.mmiid) 
         
-    def search_database(self, center_wavelength, start_band, stop_band):
+    def search_database(self, center_wavelength):
         # user has to provide a desired center wavelength to search the database
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
@@ -230,7 +231,7 @@ class mmi1x2:
 
     def fitness_function(self, input_param):
         # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
-        
+        print(input_param)
         #reset parameters
         self.IL_SR = None
         self.mean_IL = None
@@ -241,10 +242,16 @@ class mmi1x2:
         # draw gds
         self.Length_MMI = input_param[0]
         self.Gap_MMI = input_param[1]
-
+        
+        self.draw_gds()
         self.run()
         self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
+        self.insert_into_database()
 
+
+        print(self.mean_IL)
+        if (self.mean_IL == None): return 100000
+        if (self.mean_IL < -0.5): return 100000
         return self.mean_IL
 
 #Test code
@@ -252,17 +259,13 @@ if __name__ == '__main__':
     #running of an example
     #filepath = ""
     db = "./MMIDB.db"
-    dir_path = ""
+    #dir_path = ""
     
     #running an example
-    #c = mmi1x2(dbpath=db, xmargin=1, ymargin=1, zmargin=1, 
-    #           wavelength_points=5, dirpath=dir_path, Width_MMI=3, 
-    #           Length_MMI=7, Gap_MMI=0.2, Taper_Length=8, 
-    #           Taper_Width=9,count=0)
+    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
     
     #c.runall()
 
-    
     # trying optimization function
-    res = scipy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA', options={"maxiter": 10})
+    res = scipy.optimize.minimize(c.fitness_function, (5.5,0.25),method='COBYLA', options={"maxiter": 100})
     print(res)

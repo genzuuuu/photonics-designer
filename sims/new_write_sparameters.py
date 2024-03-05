@@ -494,7 +494,7 @@ def write_sparameters_lumerical(
         filepath_sim_settings.write_text(yaml.dump(sim_settings))
         if delete_fsp_files and fspdir.exists():
             shutil.rmtree(fspdir)
-            shutil.rmtree(gdspath) #delete top.gds file
+            #shutil.rmtree(gdspath) #delete top.gds file
             #logger.info(
             #    f"deleting simulation files in {str(fspdir)!r}. "
             #    "To keep them, use delete_fsp_files=False flag"

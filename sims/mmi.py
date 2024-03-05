@@ -15,6 +15,11 @@ from gplugins.common.utils.get_sparameters_path import (
 )
 from gdsfactory.pdk import get_layer_stack
 
+#pyswarms testing
+import pyswarms as ps
+from gdsfactory.config import PATH
+from functools import partial
+
 import gplugins.lumerical as sim
 from new_write_sparameters import write_sparameters_lumerical as WL
 
@@ -23,6 +28,8 @@ import re
 import math
 import scipy
 
+wrk_dir = PATH.cwd / "extra"
+wrk_dir.mkdir(exist_ok=True)
 
 class mmi1x2:
     def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, 
@@ -88,7 +95,6 @@ class mmi1x2:
         #entry = self.search_database(center_wavelength=self.target_CW)
         #if entry != None: converged = True #insert database entry into mmi values
 
-    
     def draw_gds(self):
 
         #gf.config.rich_output()
@@ -131,29 +137,9 @@ class mmi1x2:
 
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
         self.IL_SR = data_1
-        
-    def insert_into_database(self): 
-        #file_path = get_sparameters_path(
-        #    component=self.component,
-        #    layer_stack=self.layer_stack,
-        #    **self.parameters,
-        #)
-        file_path= None
-        num_simulation = self.parameters['wavelength_points']
-        conn = sqlite3.connect(self.dbpath)
-        print("[INFO] : Successful connection!")
 
-        # reads the biggest number of MMIID 
-        cur = conn.cursor()
-        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI1x2'''
-        cur.execute(sql_sel_max_query)
-        MMIID = cur.fetchall()[0][0]
-        if (MMIID == None): 
-            MMIID = 0
-        else: 
-            MMIID += 1
-        self.mmiid = MMIID
-        
+    def updateClass(self):
+        num_simulation = self.parameters['wavelength_points']
         # find center wavelength
         temp = 1 / ( 2 * (self.IL_SR['insertion loss'][0][1]+self.IL_SR['splitting ratio'][0][1] ) )
         # print(temp)
@@ -185,6 +171,28 @@ class mmi1x2:
                     data_subset_SR.append(self.IL_SR['splitting ratio'][i][1])
             self.mean_IL = sum(data_subset_IL)/len(data_subset_IL)
             self.mean_SR = sum(data_subset_SR)/len(data_subset_SR)    
+
+        
+    def insert_into_database(self): 
+        #file_path = get_sparameters_path(
+        #    component=self.component,
+        #    layer_stack=self.layer_stack,
+        #    **self.parameters,
+        #)
+        file_path= None
+        conn = sqlite3.connect(self.dbpath)
+        print("[INFO] : Successful connection!")
+
+        # reads the biggest number of MMIID 
+        cur = conn.cursor()
+        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI1x2'''
+        cur.execute(sql_sel_max_query)
+        MMIID = cur.fetchall()[0][0]
+        if (MMIID == None): 
+            MMIID = 0
+        else: 
+            MMIID += 1
+        self.mmiid = MMIID
 
         self.file_path = file_path
         # insert .dat file path along with MMI specs into MMI table into a new row
@@ -226,12 +234,14 @@ class mmi1x2:
         self.draw_gds()
         self.run()
         self.splitting_ratio_insertion_loss()
+        self.updateClass()
         self.insert_into_database()
 
 
-    def fitness_function(self, input_param):
+    def fitness_function_scipy(self, input_param):
         # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
         print(input_param)
+
         #reset parameters
         self.IL_SR = None
         self.mean_IL = None
@@ -246,13 +256,44 @@ class mmi1x2:
         self.draw_gds()
         self.run()
         self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
-        self.insert_into_database()
-
+        self.updateClass()
 
         print(self.mean_IL)
         if (self.mean_IL == None): return 100000
         if (self.mean_IL < -0.5): return 100000
         return self.mean_IL
+
+    # ## Define the trainable function for the PSO optimization
+    def fitness_function_swarm(self, x):
+        """Training step, or `trainable`, function for Ray Tune to run simulations and return results."""
+        loss_arr = []
+
+        for xi in x:
+            print(xi)
+            self.IL_SR = None
+            self.mean_IL = None
+            self.mean_SR = None
+            self.IL_center = None
+            self.SR_center = None
+
+            # Component to optimize
+            self.Length_MMI = xi[0]
+            self.Gap_MMI = xi[1]
+
+            component = gf.components.mmi1x2(length_mmi=xi[0], width_mmi=xi[1])
+
+            self.draw_gds()
+            self.run()
+            self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
+            self.updateClass()
+
+            print(f"mean IL{self.mean_IL}")
+            if (self.mean_IL == None): loss_x = 10000
+            elif (self.mean_IL < -0.5): loss_x = 10000
+            else: loss_x = self.mean_IL
+            loss_arr.append(abs(loss_x)) #trims off negative numbers
+
+        return np.asarray(loss_arr)
 
 #Test code
 if __name__ == '__main__':
@@ -261,11 +302,34 @@ if __name__ == '__main__':
     db = "./MMIDB.db"
     #dir_path = ""
     
-    #running an example
+    '''
+    #running an optimization example
     c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
-    
-    #c.runall()
 
     # trying optimization function
     res = scipy.optimize.minimize(c.fitness_function, (5.5,0.25),method='COBYLA', options={"maxiter": 100})
-    print(res)
+    c.insert_into_database()
+    print(res)'''
+
+    # Define the target value for the loss function
+    #loss = partial(loss_S21_L1, target=0)
+    #func = partial(trainable_simulations, loss=loss)
+
+    # Create bounds for the optimization
+    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
+    max_bound = np.array([0.05, 0.05])
+    min_bound = np.array([10,10])
+    bounds = (min_bound, max_bound)
+
+    # Set options for the PSO optimizer
+    options = {"c1": 0.5, "c2": 0.3, "w": 0.9} #I don't know what this does
+
+    # Create an instance of the PSO optimizer
+    optimizer = ps.single.GlobalBestPSO(
+        n_particles=10, dimensions=2, options=options, bounds=bounds
+    )
+
+    cost, pos = optimizer.optimize(c.fitness_function_swarm, iters=100)
+
+    print(cost)
+    print(pos)

@@ -21,38 +21,34 @@ from new_write_sparameters import write_sparameters_lumerical as WL
 import sqlite3
 import re
 import math
-import spicy
+import scipy
 
 
 class mmi1x2:
-
-
-    component = None
-
-    def __init__(self, Width_MMI = 3.8, Length_MMI=12.8, mmiid=None, Gap_MMI=0.25, Taper_Length=10, Taper_Width=1.4, count=0,**kwargs):
+    def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
         #defaults    
         self.parameters = dict(
             background_material = "sio2",
             port_margin = 1.5,
             port_extension = 5.0,
-            mesh_accuracy = 1.5,
-            wavelength_start = 1.4,
-            wavelength_stop = 1.6,
-            wavelength_points = 5,
+            mesh_accuracy = 2,
+            wavelength_start = center_wavelength- bandwidth/2,
+            wavelength_stop = center_wavelength+ bandwidth/2,
+            wavelength_points = 3,
             xmargin = 1,
             ymargin = 1,
             zmargin = 1,
-            overwrite=True,
+            overwrite=False,
             dirpath = None,
         ) 
 
+        self.dbpath = db
         self.component = None
         self.layer_stack=get_layer_stack()
-        self.num_port = 3
-        self.sparam = None
-        self.IL_SR = None
+        #self.num_port = 3
         
+        #MMI Params
         self.mmiid = mmiid
         self.Width_MMI = Width_MMI
         self.Length_MMI = Length_MMI
@@ -61,6 +57,11 @@ class mmi1x2:
         self.Taper_Width = Taper_Width
         self.count=count
 
+        #outputs & targets
+        self.sparam = None
+        self.IL_SR = None
+        self.target_CW = None
+        self.converged = False
         self.center_wavelength = None
         self.start_bandwidth = None
         self.stop_bandwidth = None
@@ -82,8 +83,10 @@ class mmi1x2:
         self.__dict__.update(self.parameters)
         print(self.parameters)
         
-        #TODO
-        #search database for design 
+        #search database for design
+        entry = self.search_database(center_wavelength=self.target_CW)
+        if entry != None: converged = True #insert database entry into mmi values
+
     
     def draw_gds(self):
 
@@ -101,6 +104,7 @@ class mmi1x2:
         s = lumapi.FDTD(hide=True)
 
         a = WL(self.component, run=True, session=s,  count=self.count, **self.parameters)
+        self.count += 1
         
         # get S parameters from the simulation
         self.sparam = s.getsweepresult("s-parameter sweep", "S parameters")
@@ -127,7 +131,7 @@ class mmi1x2:
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
         self.IL_SR = data_1
         
-    def insert_into_database(self, database_path): 
+    def insert_into_database(self): 
         #file_path = get_sparameters_path(
         #    component=self.component,
         #    layer_stack=self.layer_stack,
@@ -135,7 +139,7 @@ class mmi1x2:
         #)
         file_path= None
         num_simulation = self.parameters['wavelength_points']
-        conn = sqlite3.connect(database_path)
+        conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
         # reads the biggest number of MMIID 
@@ -192,9 +196,9 @@ class mmi1x2:
         print("[INFO] : ", file_path, "is in the database.") 
         print("[INFO] : This is entry number:", self.mmiid) 
         
-    def search_database(self, database_path, center_wavelength, start_band, stop_band):
+    def search_database(self, center_wavelength, start_band, stop_band):
         # user has to provide a desired center wavelength to search the database
-        conn = sqlite3.connect(database_path)
+        conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
         # reads the biggest number of MMIID 
@@ -206,8 +210,8 @@ class mmi1x2:
         print("MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath")
         print(row)
 
-    def alter_database_entry(self, database_path):
-        conn = sqlite3.connect(database_path)
+    def alter_database_entry(self):
+        conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
         # reads the biggest number of MMIID 
         cur = conn.cursor()
@@ -217,68 +221,48 @@ class mmi1x2:
         print("[INFO] : Entry modified")
         
     #runs full simulation and inserts into database
-    def runall(self, database_path):
+    def runall(self):
         self.draw_gds()
         self.run()
         self.splitting_ratio_insertion_loss()
-        self.insert_into_database(database_path=database_path)
+        self.insert_into_database()
 
 
-def fitness_function(input_param):
-    # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
-    
-    # draw gds
-    PDK = get_generic_pdk()
-    PDK.activate()
+    def fitness_function(self, input_param):
+        # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
+        
+        #reset parameters
+        self.IL_SR = None
+        self.mean_IL = None
+        self.mean_SR = None
+        self.IL_center = None
+        self.SR_center = None
+        
+        # draw gds
+        self.Length_MMI = input_param[0]
+        self.Gap_MMI = input_param[1]
 
-    #change such that it takes in some of the parameter values
-    component = gf.components.cells["mmi1x2"](length_mmi=input_param[0], gap_mmi=input_param[1],width_mmi=2.5, length_taper=10.0, width_taper=1.0)
+        self.run()
+        self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
 
+        return self.mean_IL
 
-
-    # run simulation
-    #simulate gds to get s_parameters
-    s = lumapi.FDTD(hide=True)
-
-    a = sim.write_sparameters_lumerical(component, run=True, session=s)
-    
-    #check specs related to s_parameters
-    
-
-    # get S parameters from the simulation
-    sparam = s.getsweepresult("s-parameter sweep", "S parameters")
-    print(sparam)
-
-    # calculate mean insertion loss
-    insertion_loss = []
-    for x in range(500):     
-        T2_temp = abs(sparam['S21'][x])*abs(sparam['S21'][x])
-        T3_temp = abs(sparam['S31'][x])*abs(sparam['S31'][x])
-        insertion_loss.append(10*math.log10(T3_temp+T2_temp))
-    print(insertion_loss)
-
-    mean_IL = sum(insertion_loss)/len(insertion_loss)
-
-    return mean_IL
-
-
-##
+#Test code
 if __name__ == '__main__':
     #running of an example
     #filepath = ""
-    databasepath = "./MMIDB.db"
+    db = "./MMIDB.db"
     dir_path = ""
     
     #running an example
-    c = mmi1x2(xmargin=1, ymargin=1, zmargin=1, 
-               wavelength_points=5, mesh_accuracy=2, 
-               overwrite=True, dirpath=dir_path, Width_MMI=3, 
-               Length_MMI=7, Gap_MMI=0.2, Taper_Length=8, 
-               Taper_Width=9,count=0)
+    #c = mmi1x2(dbpath=db, xmargin=1, ymargin=1, zmargin=1, 
+    #           wavelength_points=5, dirpath=dir_path, Width_MMI=3, 
+    #           Length_MMI=7, Gap_MMI=0.2, Taper_Length=8, 
+    #           Taper_Width=9,count=0)
     
-    c.runall(database_path=databasepath)
+    #c.runall()
 
     
     # trying optimization function
-    #res = spicy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA')
-    #print(res)
+    res = scipy.optimize.minimize(fitness_function, (5.5,0.25,100),method='COBYLA', options={"maxiter": 10})
+    print(res)

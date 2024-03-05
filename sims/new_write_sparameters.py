@@ -204,11 +204,15 @@ def write_sparameters_lumerical(
     layer_to_zmin = layer_stack.get_layer_to_zmin()
     layer_to_material = layer_stack.get_layer_to_material()
 
+    logger.info(
+        f"Starting simulation"
+    )
+
     if hasattr(component.info, "simulation_settings"):
         sim_settings |= component.info.simulation_settings
-        logger.info(
-            f"Updating {component.name!r} sim settings {component.simulation_settings}"
-        )
+        #logger.info(
+        #    f"Updating {component.name!r} sim settings {component.simulation_settings}"
+        #)
     for setting in settings:
         if setting not in sim_settings:
             raise ValueError(
@@ -256,13 +260,13 @@ def write_sparameters_lumerical(
     fspdir = filepath.parent / f"{filepath.stem}_s-parametersweep"
 
     if run and filepath_npz.exists() and not overwrite:
-        logger.info(f"Reading Sparameters from {filepath_npz.absolute()!r}")
+        #logger.info(f"Reading Sparameters from {filepath_npz.absolute()!r}")
         return np.load(filepath_npz)
 
     if not run and session is None:
         print(run_false_warning)
 
-    logger.info(f"Writing Sparameters to {filepath_npz.absolute()!r}")
+    #logger.info(f"Writing Sparameters to {filepath_npz.absolute()!r}")
     x_min = (component_extended.xmin - xmargin) * 1e-6
     x_max = (component_extended.xmax + xmargin) * 1e-6
     y_min = (component_extended.ymin - ymargin) * 1e-6
@@ -300,9 +304,9 @@ def write_sparameters_lumerical(
         version=__version__,
     )
 
-    logger.info(
-        f"Simulation size = {x_span*1e6:.3f}, {y_span*1e6:.3f}, {z_span*1e6:.3f} um"
-    )
+    #logger.info(
+    #    f"Simulation size = {x_span*1e6:.3f}, {y_span*1e6:.3f}, {z_span*1e6:.3f} um"
+    #)
 
     # from pprint import pprint
     # filepath_sim_settings.write_text(yaml.dump(sim_settings))
@@ -388,7 +392,7 @@ def write_sparameters_lumerical(
         s.setnamed(layername, "z", z * 1e-6)
         s.setnamed(layername, "z span", thickness * 1e-6)
         set_material(session=s, structure=layername, material=material)
-        logger.info(f"adding {layer}, thickness = {thickness} um, zmin = {zmin} um ")
+        #logger.info(f"adding {layer}, thickness = {thickness} um, zmin = {zmin} um ")
 
     for i, port in enumerate(ports):
         zmin = layer_to_zmin[port.layer]
@@ -443,10 +447,10 @@ def write_sparameters_lumerical(
         s.setnamed(p, "name", port.name)
         # s.setnamed(p, "name", f"o{i+1}")
 
-        logger.info(
-            f"port {p} {port.name!r}: at ({port.x}, {port.y}, 0)"
-            f"size = ({dxp}, {dyp}, {zspan})"
-        )
+        #logger.info(
+        #    f"port {p} {port.name!r}: at ({port.x}, {port.y}, 0)"
+        #    f"size = ({dxp}, {dyp}, {zspan})"
+        #)
 
     s.setglobalsource("wavelength start", ss.wavelength_start * 1e-6)
     s.setglobalsource("wavelength stop", ss.wavelength_stop * 1e-6)
@@ -462,7 +466,7 @@ def write_sparameters_lumerical(
         s.runsweep("s-parameter sweep")
         sp = s.getsweepresult("s-parameter sweep", "S parameters")
         s.exportsweep("s-parameter sweep", str(filepath))
-        logger.info(f"wrote sparameters to {str(filepath)!r}")
+        #logger.info(f"wrote sparameters to {str(filepath)!r}")
 
         sp["wavelengths"] = sp.pop("lambda").flatten() * 1e6
         np.savez_compressed(filepath, **sp)
@@ -481,14 +485,20 @@ def write_sparameters_lumerical(
 
         end = time.time()
         sim_settings.update(compute_time_seconds=end - start)
+
+        logger.info(
+            f"Completed simulation, compute time (minutes): {(end-start)/60}"
+        )
+
         sim_settings.update(compute_time_minutes=(end - start) / 60)
         filepath_sim_settings.write_text(yaml.dump(sim_settings))
         if delete_fsp_files and fspdir.exists():
             shutil.rmtree(fspdir)
-            logger.info(
-                f"deleting simulation files in {str(fspdir)!r}. "
-                "To keep them, use delete_fsp_files=False flag"
-            )
+            shutil.rmtree(gdspath) #delete top.gds file
+            #logger.info(
+            #    f"deleting simulation files in {str(fspdir)!r}. "
+            #    "To keep them, use delete_fsp_files=False flag"
+            #)
 
         return sp
 

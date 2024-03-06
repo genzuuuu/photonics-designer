@@ -177,8 +177,8 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE %s>StartBandwidth and %s<StopBandwidth  ORDER BY ABS(CenterWavelength - %s) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
-        cur.execute(sql_insert_file_query, (center_wavelength))
+        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE ?>StartBandwidth and ?<StopBandwidth  ORDER BY ABS(CenterWavelength - ?) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
+        cur.execute(sql_insert_file_query, (center_wavelength,center_wavelength,center_wavelength))
         row = cur.fetchall()
         print("[INFO] : Successful Query!")
         print("MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath")

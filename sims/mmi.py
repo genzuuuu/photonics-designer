@@ -177,8 +177,8 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE ?>StartBandwidth and ?<StopBandwidth  ORDER BY ABS(CenterWavelength - ?) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
-        cur.execute(sql_insert_file_query, (center_wavelength,center_wavelength,center_wavelength))
+        sql_insert_file_query = ''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE ?>StartBandwidth and ?<StopBandwidth  ORDER BY ABS(CenterWavelength - ?) LIMIT 3) AS subquery_table  ORDER BY ABS(ILCenter) ASC LIMIT 1 ; '''
+        cur.execute(sql_insert_file_query, (start_band,stop_band,center_wavelength))
         row = cur.fetchall()
         print("[INFO] : Successful Query!")
         print("MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath")
@@ -189,7 +189,7 @@ class mmi1x2:
         print("[INFO] : Successful connection!")
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_edit_query = '''UPDATE MMI SET WidthMMI= %s, LengthMMI= %s, GapMMI= %s, LengthTaper= %s, WidthTaper= %s, CenterWavelength= %s, StartBandwidth= %s, StopBandwidth= %s, MeanIL= %s, MeanSR= %s, ILCenter= %s, SRCenter= %s,  FilePath= %s WHERE ID = %s; '''
+        sql_edit_query = '''UPDATE MMI SET WidthMMI= ?, LengthMMI= ?, GapMMI= ?, LengthTaper= ?, WidthTaper= ?, CenterWavelength= ?, StartBandwidth= ?, StopBandwidth= ?, MeanIL= ?, MeanSR= ?, ILCenter= ?, SRCenter= ?,  FilePath= ? WHERE ID = ?; '''
         cur.execute(sql_edit_query, (self.Width_MMI, self.Length_MMI, self.Gap_MMI, self.Taper_Length, self.Taper_Width,self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.file_path, self.mmiid))
         conn.commit()
         print("[INFO] : Entry modified")

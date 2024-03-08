@@ -1,0 +1,153 @@
+# adapted from Zuyang Liu (2023)
+from datetime import datetime
+import sys
+import os
+import numpy as np
+import gdsfactory as gf
+
+from helper_functions.generic.misc import write_to_json
+from helper_functions.lumerical.materials import add_material_sampled3d
+from helper_functions.lumerical.gds_handling import import_gds_to_lumerical
+from helper_functions.generic.gds_handling import extend_from_ports
+
+def eme_from_gds(parameters):
+    r""" initiate Lumerical MODE EME simulation from GDS
+
+    Args:
+        parameters (dict): simulation parameters
+
+    Returns:
+        results (dict): only if flag_run_simulation
+    """
+    # default parameters
+    um = 1e-6
+    
+    p = dict(
+        wavelength = 0.85,
+        wav_start = 0.78,
+        wav_stop = 0.94,
+        wav_num = 201,
+        resolution = 6,
+        temperature = 300,
+        gds_file = 'mmi_1x2_450_VISPIC2', # path to GDS file
+        material_file = r"materials_library\VisPDK_materials_mid",
+        lumapi_path = r"C:\Program Files\Lumerical\v232\api\python",
+        file_name = 'test_'+str(datetime.now().strftime('%Y%m%d%H%M%S')),
+        mode_num = 5,
+        flag_extend = 1,
+        extension = 10,
+        flag_run_simulation = 0,
+        flag_length_sweep = 0,
+        flag_wavelength_sweep = 0,
+    )
+    
+    # update default setting with input
+    p.update(parameters)
+    
+    # convert settings to local variables
+    for key, value in p.items():
+        globals()[key] = value
+    
+    # save parameters to a json file
+    write_to_json(dict_name=p, json_name=file_name+'_eme.json')
+    
+    # start lumerical mode
+    sys.path.append(lumapi_path)
+    sys.path.append(os.path.dirname(__file__))
+    import lumapi
+    project = lumapi.MODE()
+    project.clear()
+    project.deleteall()
+    project.switchtolayout()
+    
+    # import material to database
+    mat_wg = 'SiN PECVD'
+    add_material_sampled3d(project=project, file=material_file, material='SiN', display_name=mat_wg, color=[0, 0, 1, 1])
+    mat_ox = 'glass' # as background material
+    add_material_sampled3d(project=project, file=material_file, material='SiO2', display_name=mat_ox,)
+    
+    # read gds, and extend from ports
+    if flag_extend:
+        device = gf.import_gds(gds_file+'.gds', read_metadata=True)
+        device, ports = extend_from_ports(device, offset=extension)
+        device.write_gds(file_name+'.gds', with_metadata=True)
+        import_gds_to_lumerical(project=project, gds_file=file_name+'.gds', material=mat_wg, cell_name='extended_cell')
+        
+    else:
+        device = gf.import_gds(gds_file+'.gds', read_metadata=True)
+        ports = device.ports
+        device.write_gds(file_name+'.gds', with_metadata=True)
+        import_gds_to_lumerical(project=project, gds_file=file_name+'.gds', material=mat_wg)
+        
+    project.addeme()
+    project.set('simulation temperature', temperature)
+    project.set('solver type', '3D: X prop')
+    project.set('background material', mat_ox)
+    project.set('wavelength', wavelength*um)
+    project.set('x min', (device.xmin+1.0)*um)
+    project.set('number of cell groups', 3)
+    project.set('number of modes for all cell groups', mode_num)
+    project.set('group spans', 
+                np.array(
+                    [
+                        (flag_extend*extension-1.0)*um, 
+                        (device.xmax-device.xmin-2*flag_extend*extension)*um, 
+                        (flag_extend*extension-1.0)*um
+                    ]))
+    project.set('cells', np.array([1, 10, 1]))
+    project.set('subcell method', np.array([0, 1, 0]))
+    project.set('y min', (device.ymin - 1.0)*um)
+    project.set('y max', (device.ymax + 1.0)*um)
+    project.set('z min', -1*um)
+    project.set('z max', 1*um)
+    
+    project.set('define y mesh by', 'maximum mesh step')
+    project.set('dy', wavelength*um/resolution)
+    project.set('define z mesh by', 'maximum mesh step')
+    project.set('dz', wavelength*um/resolution)
+    
+    project.set('y min bc', 'PML')
+    project.set('y max bc', 'PML')
+    project.set('z min bc', 'PML')
+    project.set('z max bc', 'PML')
+    
+    project.select('EME::Ports::port_1')
+    project.set('mode selection', 'user select')
+    project.set('selected mode numbers', mode_idx)
+    project.updateportmodes()
+    
+    project.select('EME::Ports::port_2')
+    project.set('mode selection', 'user select')
+    project.set('selected mode numbers', np.array([1,2,3,4]))
+    project.updateportmodes()
+    
+    project.save(file_name+'_EME.lms')
+    
+    if flag_run_simulation:
+        project.run()
+        results = {}
+        
+        if flag_length_sweep:
+            project.setemeanalysis('propagation sweep', 1)
+            project.setemeanalysis('parameter', 'group span 2')
+            project.setemeanalysis('start', 10*um)
+            project.setemeanalysis('stop', 500*um)
+            project.setemeanalysis('number of points', 10)
+            project.emesweep()
+            
+            results['S_propagation_sweep'] = project.getemesweep('S')
+        
+        if flag_wavelength_sweep:
+            project.setemeanalysis("wavelength sweep", 1)
+            project.setemeanalysis("start wavelength", wav_start*um)
+            project.setemeanalysis("stop wavelength", wav_stop*um)
+            project.setemeanalysis("number of wavelength points", wav_num)
+            project.setemeanalysis("calculate group delays", 1)
+            project.emesweep("wavelength sweep")
+
+            results['S_wavelength_sweep'] = project.exportemesweep("s_param")
+        
+        write_to_json(dict_name=results, json_name=file_name+'_results.json')
+                    
+        return results
+    

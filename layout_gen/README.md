@@ -7,3 +7,9 @@ The first necessary accessibility is the utilization of [Klayout](https://www.kl
 *20240207 llama_index_KG.ipynb* and *20240214 layout_gen with llama_vector_store* gives the procedure to creating specific-domain knowledge graph by importing related information. Based on this graph, some tests are implenmented as well to generate the code following the function in gdsfactory.
 
 The combination of layout and simulation requires the file conversion between Klayout and [Lumerical INTERCONNECT](https://www.ansys.com/products/optics/interconnect). The script command *exportnetlist(filename)* can export the netlist file in spice format. *20240220 spi_to_yaml* is possible to convert the file type to .yaml format. Since the lanuage rule is different, this conversion results in the .yaml file is unreadable under gdsfactory package supporting which requires further debugging.
+
+With the utilization of SiEPIC package in Klayout, the simulation can be intrigged by the layout. But a automation control script is required here to replace the use of mouse.
+
+# TODO
+## Scripts for auto pull-up for SiEPIC in Klayout
+## Test the Gemma on chat/code function

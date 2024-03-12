@@ -11,5 +11,5 @@ The combination of layout and simulation requires the file conversion between Kl
 With the utilization of SiEPIC package in Klayout, the simulation can be intrigged by the layout. But a automation control script is required here to replace the use of mouse.
 
 # TODO
-## Scripts for auto pull-up for SiEPIC in Klayout
-## Test the Gemma on chat/code function
+1. Scripts for auto pull-up for SiEPIC in Klayout
+2. Test the Gemma on chat/code function

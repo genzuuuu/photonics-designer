@@ -1,13 +1,13 @@
 import time
 import scipy
-import np
+import mumpy as np
 import pyswarms as ps
 
 def ScipyOptMin(component):
 
     print("Starting minimization")
     t0 = time.time()
-    res = scipy.optimize.minimize(component.fitness_function, (5.5,0.25),method='COBYLA', options={"maxiter": 50})
+    res = scipy.optimize.minimize(component.fitness_function_scipy, (5.5,0.25),method='COBYLA', options={"maxiter": 50})
     component.insert_into_database()
     print(f"final res: {res}")
     print(f"Final time: {time.time() - t0}")

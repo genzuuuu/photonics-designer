@@ -258,8 +258,8 @@ class mmi1x2:
         self.SR_center = None
         
         # draw gds
-        self.Length_MMI = input_param[0]
-        self.Gap_MMI = input_param[1]
+        self.MMIparams["Length_MMI"] = input_param[0]
+        self.MMIparams["Gap_MMI"] = input_param[1]
         
         self.draw_gds()
         self.run()
@@ -288,8 +288,8 @@ class mmi1x2:
             self.SR_center = None
 
             # Component to optimize
-            self.Length_MMI = xi[0]
-            self.Gap_MMI = xi[1]
+            self.MMIparams["Length_MMI"] = xi[0]
+            self.MMIparams["Gap_MMI"] = xi[1]
 
             self.draw_gds()
             self.run()

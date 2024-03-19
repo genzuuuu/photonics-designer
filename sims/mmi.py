@@ -45,7 +45,7 @@ class mmi1x2:
             background_material = "sio2",
             port_margin = 1.5,
             port_extension = 5.0,
-            mesh_accuracy = 2,
+            mesh_accuracy = 1,
             wavelength_start = center_wavelength- bandwidth/2,
             wavelength_stop = center_wavelength+ bandwidth/2,
             wavelength_points = 3,
@@ -103,6 +103,9 @@ class mmi1x2:
             print("Found useful design!")
             print(self.MMIparams) 
             exit() #Do something else generally
+
+            #verify design
+            
 
     def draw_gds(self):
 
@@ -240,7 +243,7 @@ class mmi1x2:
         self.run()
         self.splitting_ratio_insertion_loss()
         self.updateClass()
-        self.insert_into_database()
+        #self.insert_into_database()
 
     # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
     def fitness_function_scipy(self, input_param):
@@ -272,44 +275,12 @@ class mmi1x2:
 
     # ## Define the trainable function for the PSO optimization
     def fitness_function_swarm(self, x):
-        self.parameters["mesh_accuracy"] = 1 #for faster convergence
         """Training step, or `trainable`, function for Ray Tune to run simulations and return results."""
         loss_arr = []
 
         for xi in x:
             print(xi)
-            self.IL_SR = None
-            self.mean_IL = None
-            self.mean_SR = None
-            self.IL_center = None
-            self.SR_center = None
-
-            # Component to optimize
-            self.Length_MMI = xi[0]
-            self.Gap_MMI = xi[1]
-
-            self.draw_gds()
-            self.run()
-            self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
-            self.updateClass()
-
-            print(f"mean IL{self.mean_IL}")
-
-            #temporary fix to None and highly negative solutions
-            if (self.mean_IL == None): loss_x = 1e6
-            elif (self.mean_IL < -0.5): loss_x = 1e6
-            else: loss_x = self.mean_IL
-            loss_arr.append(abs(loss_x)) #trims off negative numbers
-
-        return np.asarray(loss_arr)
-    
-    def parallel_swarm(self, x):
-        self.parameters["mesh_accuracy"] = 1 #for faster convergence
-        """Training step, or `trainable`, function for Ray Tune to run simulations and return results."""
-        loss_arr = []
-
-        for xi in x:
-            print(xi)
+            #reset params
             self.IL_SR = None
             self.mean_IL = None
             self.mean_SR = None
@@ -342,16 +313,12 @@ if __name__ == '__main__':
     db = "./MMIDB.db"
     #dir_path = ""
     
-    '''
     #running an optimization example
     c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
     scipyminopt(c)
     # trying optimization function
 
-    '''
 
-    '''
     #running pyswarm example
     c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
-    swarmopt(c, n_processes=2)
-    '''
+    swarmopt(c)

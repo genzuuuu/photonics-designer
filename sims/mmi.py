@@ -175,12 +175,12 @@ class mmi1x2:
                 if (self.IL_SR['insertion loss'][i][0] <= self.stop_bandwidth and self.IL_SR['insertion loss'][i][0] >= self.start_bandwidth ):
                     data_subset_IL.append(self.IL_SR['insertion loss'][i][1])
                     data_subset_SR.append(self.IL_SR['splitting ratio'][i][1])
-            if (data_subset_IL is None):
+            if (not data_subset_IL):
                 self.mean_IL = None
             else:
                 self.mean_IL = sum(data_subset_IL)/len(data_subset_IL)
             
-            if (data_subset_SR is None):
+            if (not data_subset_SR):
                 self.mean_SR = None
             else:
                 self.mean_SR = sum(data_subset_SR)/len(data_subset_SR)    

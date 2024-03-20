@@ -70,7 +70,7 @@ class mmi1x2:
             Taper_Width = Taper_Width,
         )
         
-        self.count=count,
+        self.count=count
         
         #outputs & targets
         self.sparam = None

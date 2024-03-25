@@ -1,6 +1,6 @@
 import time
 import scipy
-import mumpy as np
+import numpy as np
 import pyswarms as ps
 
 def ScipyOptMin(component):

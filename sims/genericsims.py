@@ -26,6 +26,7 @@ from sims.component_opt import (
     ScipyOptMin as scipyminopt,
     particleswarm as swarmopt,
 )
+from objfunctions.mmiobj import splitting_ratio_insertion_loss as IL
 
 import sqlite3
 import re
@@ -127,15 +128,15 @@ class genericsim:
         outputs = self.ObjectiveFunction()
         
         #TODO parse outputs to be inserted into database
-        self.insert_into_database()
+        #self.insert_into_database()
 
     #searches for an accurate design and verifies it afterwards
     def search_space(self):
         final = scipyminopt(self)
         print(final)
 
-        #self.MMIparams["Length_MMI"] = final["x"][0]
-        #self.MMIparams["Gap_MMI"] = final["x"][1]
+        self.ComponentParams["Length_MMI"] = final["x"][0]
+        self.ComponentParams["Gap_MMI"] = final["x"][1]
         self.mesh_accuracy=7
 
         self.runall()
@@ -149,7 +150,7 @@ class genericsim:
 
         self.draw_gds()
         self.run()
-        output = scipyminopt()
+        output = self.ObjectiveFunction()
         print(output)
 
         if (output == None): return 1e6
@@ -190,6 +191,6 @@ if __name__ == '__main__':
     ) 
 
     #TODO add objective function
-    #g = genericsim(ParamName="mmi1x2", ComponentParams=MMIparams, ObjectiveFunction=, SimParams=parameters, db = db, 
-    #               center_wavelength=1.5, bandwidth=0.05, xmargin=1,ymargin=1,zmargin=1)
+    g = genericsim(ParamName="mmi1x2", ComponentParams=MMIparams, ObjectiveFunction=IL, SimParams=parameters, db = db, 
+                   center_wavelength=1.5, bandwidth=0.05, xmargin=1,ymargin=1,zmargin=1)
 

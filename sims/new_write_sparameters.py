@@ -304,16 +304,6 @@ def write_sparameters_lumerical(
         version=__version__,
     )
 
-    #logger.info(
-    #    f"Simulation size = {x_span*1e6:.3f}, {y_span*1e6:.3f}, {z_span*1e6:.3f} um"
-    #)
-
-    # from pprint import pprint
-    # filepath_sim_settings.write_text(yaml.dump(sim_settings))
-    # print(filepath_sim_settings)
-    # pprint(sim_settings)
-    # return
-
     try:
         import lumapi
     except ModuleNotFoundError as e:
@@ -500,7 +490,7 @@ def write_sparameters_lumerical(
             #    "To keep them, use delete_fsp_files=False flag"
             #)
 
-        return sp
+        return sp, filepath_npz
 
     filepath_sim_settings.write_text(yaml.dump(sim_settings))
     return s

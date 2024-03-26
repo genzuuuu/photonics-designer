@@ -1,43 +1,4 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import pickle
-
-#import lumapi on MPI computers
-import sys, os
-sys.path.append("C:\\Program Files\\Lumerical\\v211\\api\\python\\") 
-sys.path.append(os.path.dirname(__file__)) #Current directory
-import lumapi
-
-import gdsfactory as gf
-from gdsfactory.generic_tech import LAYER_STACK, get_generic_pdk
-from gplugins.common.utils.get_sparameters_path import (
-    get_sparameters_path_lumerical as get_sparameters_path,
-)
-from gdsfactory.pdk import get_layer_stack
-
-#pyswarms testing
-import pyswarms as ps
-from gdsfactory.config import PATH
-from functools import partial
-
-import gplugins.lumerical as sim
-from new_write_sparameters import write_sparameters_lumerical as WL
-from sims.component_opt import (
-    ScipyOptMin as scipyminopt,
-    particleswarm as swarmopt,
-)
-
-import sqlite3
-import re
-import math
-import scipy
-import time
-
-wrk_dir = PATH.cwd / "extra"
-wrk_dir.mkdir(exist_ok=True)
-
-class mmi1x2:
-
+class mmi2x2:
     def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, 
                  mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
@@ -85,7 +46,7 @@ class mmi1x2:
         self.mean_SR = None
         self.IL_center = None
         self.SR_center = None
-        self.filepath = None
+        self.file_path = None
 
         #check if an unacceptable parameter is passed in
         for settings in kwargs:
@@ -100,14 +61,14 @@ class mmi1x2:
         print(self.parameters)
         
         #search database for design
-        
+        '''
         if self.search_database(): 
             print("Found useful design!")
             print(self.MMIparams) 
             exit() #Do something else generally
 
             #verify design
-            
+        ''' 
 
     def draw_gds(self):
 
@@ -116,7 +77,7 @@ class mmi1x2:
         PDK.activate()
 
         #initialize the component
-        self.component = gf.components.cells["mmi1x2"](width_mmi=self.MMIparams["Width_MMI"], length_mmi=self.MMIparams["Length_MMI"], gap_mmi=self.MMIparams["Gap_MMI"],
+        self.component = gf.components.cells["mmi2x2"](width_mmi=self.MMIparams["Width_MMI"], length_mmi=self.MMIparams["Length_MMI"], gap_mmi=self.MMIparams["Gap_MMI"],
                                                        length_taper=self.MMIparams["Taper_Length"], width_taper=self.MMIparams["Taper_Width"])
 
     def run(self):
@@ -124,7 +85,7 @@ class mmi1x2:
         s = lumapi.FDTD(hide=True)
 
         #run FDTD simulations
-        a, self.filepath = WL(self.component, run=True, session=s,  count=self.count, **self.parameters)
+        a = WL(self.component, run=True, session=s,  count=self.count, **self.parameters)
         self.count += 1
         
         # get S parameters from the simulation
@@ -200,7 +161,7 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI1x2'''
+        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI2x2'''
         cur.execute(sql_sel_max_query)
         MMIID = cur.fetchall()[0][0]
         if (MMIID == None): 
@@ -211,12 +172,12 @@ class mmi1x2:
 
         self.file_path = file_path
         # insert .dat file path along with MMI specs into MMI table into a new row
-        sql_insert_data_query = '''INSERT INTO MMI1x2(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
+        sql_insert_data_query = '''INSERT INTO MMI2x2(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
         cur = conn.cursor()
         cur.execute(sql_insert_data_query, (MMIID, self.MMIparams["Width_MMI"], self.MMIparams["Length_MMI"], self.MMIparams["Gap_MMI"], self.MMIparams["Taper_Length"], self.MMIparams["Taper_Width"],
                                             self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  
-                                            self.filepath))
+                                            self.file_path))
         conn.commit()
         print("[INFO] : ", file_path, "is in the database.") 
         print("[INFO] : This is entry number:", self.mmiid) 
@@ -228,7 +189,7 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE {self.start_bandwidth}>StartBandwidth and {self.stop_bandwidth}<StopBandwidth  ORDER BY ABS(CenterWavelength - {self.center_wavelength}) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
+        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM MMI2x2 WHERE {self.start_bandwidth}>StartBandwidth and {self.stop_bandwidth}<StopBandwidth  ORDER BY ABS(CenterWavelength - {self.center_wavelength}) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
         cur.execute(sql_insert_file_query)
         row = cur.fetchall()
         print("[INFO] : Successful Query!")
@@ -240,9 +201,9 @@ class mmi1x2:
         print("[INFO] : Successful connection!")
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_edit_query = '''UPDATE MMI1x2 SET WidthMMI= %s, LengthMMI= %s, GapMMI= %s, LengthTaper= %s, WidthTaper= %s, CenterWavelength= %s, StartBandwidth= %s, StopBandwidth= %s, MeanIL= %s, MeanSR= %s, ILCenter= %s, SRCenter= %s,  FilePath= %s WHERE ID = %s; '''
+        sql_edit_query = '''UPDATE MMI2x2 SET WidthMMI= %s, LengthMMI= %s, GapMMI= %s, LengthTaper= %s, WidthTaper= %s, CenterWavelength= %s, StartBandwidth= %s, StopBandwidth= %s, MeanIL= %s, MeanSR= %s, ILCenter= %s, SRCenter= %s,  FilePath= %s WHERE ID = %s; '''
         cur.execute(sql_edit_query, (self.MMIparams["Width_MMI"], self.MMIparams["Length_MMI"], self.MMIparams["Gap_MMI"], self.MMIparams["Taper_Length"], self.MMIparams["Taper_Width"],
-                                     self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.filepath, self.mmiid))
+                                     self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.file_path, self.mmiid))
         conn.commit()
         print("[INFO] : Entry modified")
         
@@ -252,19 +213,7 @@ class mmi1x2:
         self.run()
         self.splitting_ratio_insertion_loss()
         self.updateClass()
-        self.insert_into_database()
-
-    #searches for an accurate design and verifies it afterwards
-    def search_space(self):
-        final = scipyminopt()
-        print(final)
-
-        self.MMIparams["Length_MMI"] = final["x"][0]
-        self.MMIparams["Gap_MMI"] = final["x"][1]
-        self.mesh_accuracy=7
-
-        self.runall()
-
+        #self.insert_into_database()
 
     # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
     def fitness_function_scipy(self, input_param):
@@ -287,12 +236,12 @@ class mmi1x2:
         self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
         self.updateClass()
 
-        print(self.mean_IL)
+        print(f"mean IL {self.mean_IL}, mean SR {self.mean_SR}")
 
         #temporary fix to None and small values
-        if (self.mean_IL == None): return 1e6
-        if (self.mean_IL < -0.5): return 1e6
-        return self.mean_IL
+        if ((self.mean_IL == None) or (self.mean_SR == None)): return 1e6
+        elif ((self.mean_IL < -0.5) or (self.mean_SR < -0.5)): return 1e6
+        return (self.mean_IL + self.mean_SR)/2
 
     # ## Define the trainable function for the PSO optimization
     def fitness_function_swarm(self, x):
@@ -317,26 +266,12 @@ class mmi1x2:
             self.splitting_ratio_insertion_loss() #this may output nothing, make sure that error doesn't propogate
             self.updateClass()
 
-            print(f"mean IL{self.mean_IL}")
+            print(f"mean IL {self.mean_IL}, mean SR {self.mean_SR}")
 
             #temporary fix to None and highly negative solutions
-            if (self.mean_IL == None): loss_x = 1e6
-            elif (self.mean_IL < -0.5): loss_x = 1e6
-            else: loss_x = self.mean_IL
+            if ((self.mean_IL == None) or (self.mean_SR == None)): loss_x = 1e6
+            elif ((self.mean_IL < -0.5) or (self.mean_SR < -0.5)): loss_x = 1e6
+            else: loss_x = (self.mean_IL + self.mean_SR)/2
             loss_arr.append(abs(loss_x)) #trims off negative numbers
 
         return np.asarray(loss_arr)
-    
-
-#Test code
-if __name__ == '__main__':
-    db = "./MMIDB.db" 
-    
-    #running an optimization example
-    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
-    c.search_space() #search_space testing
-    scipyminopt(c)
-
-    #running pyswarm example
-    #c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
-    #swarmopt(c)

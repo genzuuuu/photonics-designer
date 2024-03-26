@@ -189,12 +189,6 @@ class mmi1x2:
 
         
     def insert_into_database(self): 
-        #file_path = get_sparameters_path(
-        #    component=self.component,
-        #    layer_stack=self.layer_stack,
-        #    **self.parameters,
-        #)
-        file_path= None
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
@@ -209,7 +203,6 @@ class mmi1x2:
             MMIID += 1
         self.mmiid = MMIID
 
-        self.file_path = file_path
         # insert .dat file path along with MMI specs into MMI table into a new row
         sql_insert_data_query = '''INSERT INTO MMI1x2(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''

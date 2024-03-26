@@ -37,17 +37,18 @@ wrk_dir = PATH.cwd / "extra"
 wrk_dir.mkdir(exist_ok=True)
 
 class genericsim:
-    def __init__(self, ParamName, ObjectiveFunction, db, center_wavelength, bandwidth, SimParams, ComponentParams, Width_MMI = 2.5, Length_MMI=None, 
-                 mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0, **kwargs):
+    def __init__(self, ParamName, ObjectiveFunction, SimParams, db, center_wavelength, bandwidth, 
+                 ComponentParams, count=0, **kwargs):
         
-        #defaults    
+        #defaults
+        #TODO check for correctness of simparams  
         self.parameters = SimParams
 
         self.dbpath = db
         self.component = None
         self.layer_stack=get_layer_stack()
         
-        #MMI Params
+        #Component Params
         self.ComponentParams = ComponentParams
         self.Name = ParamName
         self.count=count
@@ -55,17 +56,13 @@ class genericsim:
         
         #outputs & targets -> may need to change for default device
         self.sparam = None
-        self.IL_SR = None
         self.target_CW = None
         self.converged = False
         self.center_wavelength = center_wavelength
         self.start_bandwidth = center_wavelength - bandwidth/2
         self.stop_bandwidth = center_wavelength + bandwidth/2
-        self.mean_IL = None
-        self.mean_SR = None
-        self.IL_center = None
-        self.SR_center = None
-        self.file_path = None
+        self.filepath = None
+
         
         #search database for design
         if self.search_database(): 
@@ -75,7 +72,6 @@ class genericsim:
 
             #verify design
             
-
     def draw_gds(self):
 
         #gf.config.rich_output()
@@ -98,12 +94,6 @@ class genericsim:
 
         
     def insert_into_database(self): 
-        #file_path = get_sparameters_path(
-        #    component=self.component,
-        #    layer_stack=self.layer_stack,
-        #    **self.parameters,
-        #)
-        file_path= None
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
@@ -134,70 +124,72 @@ class genericsim:
     def runall(self):
         self.draw_gds()
         self.run()
-        self.ObjectiveFunction()
-        #self.insert_into_database()
+        outputs = self.ObjectiveFunction()
+        
+        #TODO parse outputs to be inserted into database
+        self.insert_into_database()
 
-    # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
+    #searches for an accurate design and verifies it afterwards
+    def search_space(self):
+        final = scipyminopt(self)
+        print(final)
+
+        #self.MMIparams["Length_MMI"] = final["x"][0]
+        #self.MMIparams["Gap_MMI"] = final["x"][1]
+        self.mesh_accuracy=7
+
+        self.runall()
+
     def fitness_function_scipy(self, input_param):
-        # input_param[0] = length mmi, input_param[1] = gap mmi, input_param[2] = number of wavelength points
+        #TODO
         print(input_param)
+        
+        self.ComponentParams["Length_MMI"] = input_param[0]
+        self.ComponentParams["Gao_MMI"] = input_param[1]
 
-        #reset parameters
-        self.IL_SR = None
-        self.mean_IL = None
-        self.mean_SR = None
-        self.IL_center = None
-        self.SR_center = None
-        
-        # draw gds
-        #TODO select correct parameters to optimize
-        
         self.draw_gds()
         self.run()
-        self.ObjectiveFunction()
+        output = scipyminopt()
+        print(output)
 
-        print(self.mean_IL)
-
-        #temporary fix to None and small values
-        if (self.mean_IL == None): return 1e6
-        if (self.mean_IL < -0.5): return 1e6
-        return self.mean_IL
-
-    # ## Define the trainable function for the PSO optimization
-    def fitness_function_swarm(self, x):
-        """Training step, or `trainable`, function for Ray Tune to run simulations and return results."""
-        loss_arr = []
-
-        for xi in x:
-            print(xi)
-            #reset params
-            self.IL_SR = None
-            self.mean_IL = None
-            self.mean_SR = None
-            self.IL_center = None
-            self.SR_center = None
-
-            # Component to optimize
-            #TODO select correct parameters to optimize
-            
-            self.draw_gds()
-            self.run()
-            self.ObjectiveFunction()
-
-            print(f"mean IL{self.mean_IL}")
-
-            #temporary fix to None and highly negative solutions
-            if (self.mean_IL == None): loss_x = 1e6
-            elif (self.mean_IL < -0.5): loss_x = 1e6
-            else: loss_x = self.mean_IL
-            loss_arr.append(abs(loss_x)) #trims off negative numbers
-
-        return np.asarray(loss_arr)
+        if (output == None): return 1e6
+        if (output < -0.5): return 1e6
+        return output
 
 #Test code
 if __name__ == '__main__':
-    #running of an example
-    #filepath = ""
     db = "./MMIDB.db"
-    #dir_path = ""
+    center_wavelength = 1.5
+    bandwidth=0.05
+    
+    #running of 1x2MMI example
+
+    #Convert these parameters to JSON's and fill it out here
+    MMIparams = dict(
+        mmiid=None,
+        Width_MMI=None,
+        Length_MMI=None,
+        Gap_MMI=None,
+        Taper_Length=None,
+        Taper_Width=None,
+    )
+
+    parameters = dict(
+        background_material = "sio2",
+        port_margin = 1.5,
+        port_extension = 5.0,
+        mesh_accuracy = 1,
+        wavelength_start = center_wavelength- bandwidth/2,
+        wavelength_stop = center_wavelength+ bandwidth/2,
+        wavelength_points = 3,
+        xmargin = 1,
+        ymargin = 1,
+        zmargin = 1,
+        overwrite=False,
+        dirpath = None,
+    ) 
+
+    #TODO add objective function
+    #g = genericsim(ParamName="mmi1x2", ComponentParams=MMIparams, ObjectiveFunction=, SimParams=parameters, db = db, 
+    #               center_wavelength=1.5, bandwidth=0.05, xmargin=1,ymargin=1,zmargin=1)
 

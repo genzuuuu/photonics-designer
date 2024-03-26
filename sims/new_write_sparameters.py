@@ -490,10 +490,10 @@ def write_sparameters_lumerical(
             #    "To keep them, use delete_fsp_files=False flag"
             #)
 
-        return sp, filepath_npz
+        return sp, str(filepath_npz)
 
     filepath_sim_settings.write_text(yaml.dump(sim_settings))
-    return s
+    return s, str(filepath_npz)
 
 
 def _sample_write_coupler_ring():

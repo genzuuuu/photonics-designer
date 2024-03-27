@@ -15,7 +15,7 @@ from gplugins.common.utils.get_sparameters_path import (
 )
 from gdsfactory.pdk import get_layer_stack
 
-#pyswarms testing
+pyswarms testing
 import pyswarms as ps
 from gdsfactory.config import PATH
 from functools import partial
@@ -194,7 +194,7 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_sel_max_query = '''SELECT MAX(MMIID) FROM MMI1x2'''
+        sql_sel_max_query = '''SELECT MAX(DeviceID) FROM DevicesTable'''
         cur.execute(sql_sel_max_query)
         MMIID = cur.fetchall()[0][0]
         if (MMIID == None): 
@@ -204,14 +204,17 @@ class mmi1x2:
         self.mmiid = MMIID
 
         # insert .dat file path along with MMI specs into MMI table into a new row
-        sql_insert_data_query = '''INSERT INTO MMI1x2(MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
+        sql_insert_data_query = '''INSERT INTO DevicesTable(DeviceID, Type, Parameter1, Parameter2, Parameter3, Parameter4,Parameter5, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath, function_call)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);'''
         cur = conn.cursor()
-        cur.execute(sql_insert_data_query, (MMIID, self.MMIparams["Width_MMI"], self.MMIparams["Length_MMI"], self.MMIparams["Gap_MMI"], self.MMIparams["Taper_Length"], self.MMIparams["Taper_Width"],
-                                            self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  
-                                            self.filepath))
+        cur.execute(sql_insert_data_query, (MMIID, "MMI 1x2", f'''Width_MMI = {self.MMIparams["Width_MMI"]} ''', f'''Length_MMI = {self.MMIparams["Length_MMI"]}''', 
+                                            f'''Gap_MMI = {self.MMIparams["Gap_MMI"]}''', f'''Taper_Length = {self.MMIparams["Taper_Length"]}''', 
+                                            f'''Taper_Width = {self.MMIparams["Taper_Width"]}''', self.center_wavelength*1000, 
+                                            self.start_bandwidth*1000, self.stop_bandwidth*1000, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  
+                                            self.filepath, f'''c = mmi1x2(db="Devices-simulation.db", center_wavelength=0.0, bandwidth=0.0, Width_MMI=0.0, Length_MMI=0.0, Gap_MMI=0.0, Taper_Length=0.0, Taper_Width=0.0)''' ))
         conn.commit()
-        print("[INFO] : ", file_path, "is in the database.") 
+        conn.close()
+        print("[INFO] : This MMI 1x2 is in the database.") 
         print("[INFO] : This is entry number:", self.mmiid) 
         
     def search_database(self):
@@ -221,24 +224,29 @@ class mmi1x2:
 
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM MMI1x2 WHERE {self.start_bandwidth}>StartBandwidth and {self.stop_bandwidth}<StopBandwidth  ORDER BY ABS(CenterWavelength - {self.center_wavelength}) LIMIT 3) AS subquery_table  ORDER BY ILCenter+SRcenter ASC LIMIT 1 ; '''
+        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM DevicesTable WHERE {self.start_bandwidth*1000}>StartBandwidth and {self.stop_bandwidth*1000}<StopBandwidth and Type="MMI 1x2"  ORDER BY ABS(CenterWavelength - {self.center_wavelength}) LIMIT 3) AS subquery_table  ORDER BY ILCenter ASC LIMIT 1 ; '''
         cur.execute(sql_insert_file_query)
         row = cur.fetchall()
         print("[INFO] : Successful Query!")
-        print("MMIID, WidthMMI, LengthMMI, GapMMI, LengthTaper, WidthTaper, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath")
+        print("DeviceID, Type, Parameter1, Parameter2, Parameter3, Parameter4,Parameter5, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath, function_call")
         print(row)
+        conn.close()
 
     def alter_database_entry(self):
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
         # reads the biggest number of MMIID 
         cur = conn.cursor()
-        sql_edit_query = '''UPDATE MMI1x2 SET WidthMMI= %s, LengthMMI= %s, GapMMI= %s, LengthTaper= %s, WidthTaper= %s, CenterWavelength= %s, StartBandwidth= %s, StopBandwidth= %s, MeanIL= %s, MeanSR= %s, ILCenter= %s, SRCenter= %s,  FilePath= %s WHERE ID = %s; '''
-        cur.execute(sql_edit_query, (self.MMIparams["Width_MMI"], self.MMIparams["Length_MMI"], self.MMIparams["Gap_MMI"], self.MMIparams["Taper_Length"], self.MMIparams["Taper_Width"],
-                                     self.center_wavelength, self.start_bandwidth, self.stop_bandwidth, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.filepath, self.mmiid))
+        sql_edit_query = '''UPDATE DevicesTable SET Parameter1= ?, Parameter2= ?, Parameter3= ?, Parameter4= ?, Parameter5= ?, CenterWavelength= ?, StartBandwidth= ?, StopBandwidth= ?, MeanIL= ?, MeanSR= ?, ILCenter= ?, SRCenter= ?,  FilePath= ? WHERE DeviceID = ?; '''
+        cur.execute(sql_edit_query, (f'''Width_MMI = {self.MMIparams["Width_MMI"]} ''', f'''Length_MMI = {self.MMIparams["Length_MMI"]}''', 
+                                     f'''Gap_MMI = {self.MMIparams["Gap_MMI"]}''', f'''Taper_Length = {self.MMIparams["Taper_Length"]}''', 
+                                     f'''Taper_Width = {self.MMIparams["Taper_Width"]}''',
+                                     self.center_wavelength*1000, self.start_bandwidth*1000, self.stop_bandwidth*1000, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  self.filepath, self.MMIparams["mmiid"]))
         conn.commit()
         print("[INFO] : Entry modified")
-        
+        conn.close()
+
+
     #runs full simulation and inserts into database
     def runall(self):
         self.draw_gds()
@@ -323,11 +331,15 @@ class mmi1x2:
 
 #Test code
 if __name__ == '__main__':
-    db = "./MMIDB.db" 
+    db = "Devices-simulation.db" 
     
     #running an optimization example
-    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)
-    c.search_space() #search_space testing
+    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1, mmiid=10)
+    c.MMIparams["Width_MMI"] = 12.1
+    c.alter_database_entry()
+    print(f'''Width_MMI = {c.MMIparams["Width_MMI"]} ''')
+
+    #c.search_space() #search_space testing
     scipyminopt(c)
 
     #running pyswarm example

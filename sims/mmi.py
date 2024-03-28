@@ -276,7 +276,9 @@ class mmi1x2:
 
     #searches for an accurate design and verifies it afterwards
     def search_space(self):
-        final = scipyminopt()
+        guess_length = (4*3.89*(self.MMIparams["Width_MMI"]**2)*1e-6)/(12*self.center_wavelength)
+        print(guess_length)
+        final = scipyminopt(self.component, guess=(guess_length,0.25))
         print(final)
 
         self.MMIparams["Length_MMI"] = final["x"][0]

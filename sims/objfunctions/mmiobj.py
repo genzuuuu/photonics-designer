@@ -1,7 +1,7 @@
 import math
 
 #Takes in parameters as input
-def splitting_ratio_insertion_loss(self, parameters, sparam):
+def splitting_ratio_insertion_loss(parameters, sparam):
     # num_simulation: number of simulations
     # return: insertion_loss, splitting_ratio
     num_simulation = parameters['wavelength_points']
@@ -30,19 +30,19 @@ def splitting_ratio_insertion_loss(self, parameters, sparam):
     # find bandwidth
     for i in range(num_simulation):
         if (IL_SR['insertion loss'][i][1]>-0.5 and IL_SR['splitting ratio'][i][1]>-0.25):
-            if (parameters["stop_bandwidth"] is None):
-                parameters["stop_bandwidth"] = IL_SR['insertion loss'][i][0]
-            parameters["start_bandwidth"] = IL_SR['insertion loss'][i][0]
+            if (parameters["wavelength_stop"] is None):
+                parameters["wavelength_stop"] = IL_SR['insertion loss'][i][0]
+            parameters["wavelength_start"] = IL_SR['insertion loss'][i][0]
 
     # find mean IL & mean SR
     data_subset_IL = []
     data_subset_SR = []
-    if (parameters["start_bandwidth"] is None or parameters["stop_bandwidth"] is None):
+    if (parameters["wavelength_start"] is None or parameters["wavelength_stop"] is None):
         mean_IL = None
         mean_SR = None
     else: 
         for i in range(num_simulation):
-            if (IL_SR['insertion loss'][i][0] <= parameters["stop_bandwidth"] and IL_SR['insertion loss'][i][0] >= parameters["start_bandwidth"] ):
+            if (IL_SR['insertion loss'][i][0] <= parameters["wavelength_stop"] and IL_SR['insertion loss'][i][0] >= parameters["wavelength_start"] ):
                 data_subset_IL.append(IL_SR['insertion loss'][i][1])
                 data_subset_SR.append(IL_SR['splitting ratio'][i][1])
         if (not data_subset_IL):

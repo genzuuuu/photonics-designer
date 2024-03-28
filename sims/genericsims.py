@@ -125,7 +125,7 @@ class genericsim:
     def runall(self):
         self.draw_gds()
         self.run()
-        outputs = self.ObjectiveFunction()
+        outputs = self.ObjectiveFunction(sparam = self.sparam, parameters = self.parameters)
         
         #TODO parse outputs to be inserted into database
         #self.insert_into_database()
@@ -135,8 +135,9 @@ class genericsim:
         final = scipyminopt(self)
         print(final)
 
-        self.ComponentParams["Length_MMI"] = final["x"][0]
-        self.ComponentParams["Gap_MMI"] = final["x"][1]
+        #validation
+        self.ComponentParams["length_mmi"] = final["x"][0]
+        self.ComponentParams["gap_mmi"] = final["x"][1]
         self.mesh_accuracy=7
 
         self.runall()
@@ -145,12 +146,13 @@ class genericsim:
         #TODO
         print(input_param)
         
-        self.ComponentParams["Length_MMI"] = input_param[0]
-        self.ComponentParams["Gao_MMI"] = input_param[1]
+        #TODO change this to map directly
+        self.ComponentParams["length_mmi"] = input_param[0]
+        self.ComponentParams["gap_mmi"] = input_param[1]
 
         self.draw_gds()
         self.run()
-        output = self.ObjectiveFunction()
+        output = self.ObjectiveFunction(sparam = self.sparam, parameters = self.parameters)
         print(output)
 
         if (output == None): return 1e6
@@ -167,12 +169,11 @@ if __name__ == '__main__':
 
     #Convert these parameters to JSON's and fill it out here
     MMIparams = dict(
-        mmiid=None,
-        Width_MMI=None,
-        Length_MMI=None,
-        Gap_MMI=None,
-        Taper_Length=None,
-        Taper_Width=None,
+        width_mmi=None,
+        length_mmi=None,
+        gap_mmi=None,
+        length_taper=None,
+        width_taper=None,
     )
 
     parameters = dict(

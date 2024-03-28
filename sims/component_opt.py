@@ -3,11 +3,11 @@ import scipy
 import numpy as np
 import pyswarms as ps
 
-def ScipyOptMin(component):
+def ScipyOptMin(component, guess):
 
     print("Starting minimization")
     t0 = time.time()
-    res = scipy.optimize.minimize(component.ObjectiveFunction, (5.5,0.25),method='COBYLA', options={"maxiter": 30})
+    res = scipy.optimize.minimize(component.fitness_function_scipy, guess, bounds=((0,guess[0]),(0,guess[1])),method='COBYLA', options={"maxiter": 30})
     component.insert_into_database()
     print(f"final res: {res}")
     print(f"Final time: {time.time() - t0}")

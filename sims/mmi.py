@@ -218,7 +218,7 @@ class mmi1x2:
                                             f'''Gap_MMI = {self.MMIparams["Gap_MMI"]}''', f'''Taper_Length = {self.MMIparams["Taper_Length"]}''', 
                                             f'''Taper_Width = {self.MMIparams["Taper_Width"]}''', self.center_wavelength*1000, 
                                             self.start_bandwidth*1000, self.stop_bandwidth*1000, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,                                        
-                                            self.filepath, f'''c = mmi1x2(db="Devices-simulation.db", Width_MMI={self.MMIparams["Width_MMI"]}, Length_MMI={self.MMIparams["Length_MMI"]}, Gap_MMI={self.MMIparams["Gap_MMI"]}, Taper_Length={self.MMIparams["Taper_Length"]}, Taper_Width={self.MMIparams["Taper_Width"]})\nc.start_bandwidth={self.start_bandwidth}\nc.stop_bandwidth={self.stop_bandwidth}''' ))
+                                            self.filepath, f'''c = mmi1x2(db="sims/Devices-simulation.db", start_bandwidth={self.start_bandwidth}, stop_bandwidth={self.stop_bandwidth},wavelength_start={self.wavelength_start}, wavelength_stop={self.wavelength_stop}, Width_MMI={self.MMIparams["Width_MMI"]}, Length_MMI={self.MMIparams["Length_MMI"]}, Gap_MMI={self.MMIparams["Gap_MMI"]}, Taper_Length={self.MMIparams["Taper_Length"]}, Taper_Width={self.MMIparams["Taper_Width"]})''' ))
         conn.commit()
         conn.close()
         print("[INFO] : This MMI 1x2 is in the database.") 
@@ -356,7 +356,7 @@ if __name__ == '__main__':
     c = mmi1x2(db=db, wavelength_start = 1.53, wavelength_stop=1.565,start_bandwidth = 1.53, stop_bandwidth = 1.565, xmargin=1, ymargin=1, zmargin=1, Width_MMI=3.8, Length_MMI=12.8, Gap_MMI=0.25, Taper_Length=10.0, Taper_Width=1.4)
 
     c.insert_into_database()
-    c.delete_database_entry()
+    #c.delete_database_entry()
     #print(c.parameters())
 
     #c.search_space() #search_space testing

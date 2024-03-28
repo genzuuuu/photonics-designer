@@ -39,7 +39,7 @@ wrk_dir.mkdir(exist_ok=True)
 
 class mmi1x2:
 
-    def __init__(self, db, wavelength_start,wavelength_stop,center_wavelength=None, bandwidth=None, Width_MMI = 2.5, Length_MMI=None, 
+    def __init__(self, db, wavelength_start,wavelength_stop,center_wavelength=None, bandwidth=None, start_bandwidth=None,stop_bandwidth=None, Width_MMI = 2.5, Length_MMI=None, 
                  mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
         #defaults    
@@ -84,8 +84,8 @@ class mmi1x2:
         #self.center_wavelength = center_wavelength
         #self.start_bandwidth = center_wavelength - bandwidth/2
         #self.stop_bandwidth = center_wavelength + bandwidth/2
-        self.start_bandwidth = None
-        self.stop_bandwidth = None
+        self.start_bandwidth = start_bandwidth
+        self.stop_bandwidth = stop_bandwidth
         self.center_wavelength = (wavelength_stop + wavelength_start)/2
         self.mean_IL = None
         self.mean_SR = None
@@ -203,12 +203,12 @@ class mmi1x2:
         sql_sel_max_query = '''SELECT MAX(DeviceID) FROM DevicesTable'''
         cur.execute(sql_sel_max_query)
         MMIID = cur.fetchall()[0][0]
+
         if (MMIID == None): 
             MMIID = 0
         else: 
             MMIID += 1
         self.MMIparams["mmiid"] = MMIID
-        
 
         # insert .dat file path along with MMI specs into MMI table into a new row
         sql_insert_data_query = '''INSERT INTO DevicesTable(DeviceID, Type, Parameter1, Parameter2, Parameter3, Parameter4,Parameter5, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath, function_call)
@@ -353,13 +353,10 @@ if __name__ == '__main__':
     db = "sims/Devices-simulation.db" 
     
     #running an optimization example
-    c = mmi1x2(db=db, wavelength_start = 1.545, wavelength_stop=1.55 , xmargin=1, ymargin=1, zmargin=1, Width_MMI=3.8, Length_MMI=12.8, Gap_MMI=0.25, Taper_Length=10.0, Taper_Width=1.4)
-    c.start_bandwidth = 1.53
-    c.stop_bandwidth = 1.565
-    
+    c = mmi1x2(db=db, wavelength_start = 1.53, wavelength_stop=1.565,start_bandwidth = 1.53, stop_bandwidth = 1.565, xmargin=1, ymargin=1, zmargin=1, Width_MMI=3.8, Length_MMI=12.8, Gap_MMI=0.25, Taper_Length=10.0, Taper_Width=1.4)
+
     c.insert_into_database()
     c.delete_database_entry()
-    print(c.MMIparams["mmiid"])
     #print(c.parameters())
 
     #c.search_space() #search_space testing

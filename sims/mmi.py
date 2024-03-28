@@ -6,6 +6,7 @@ import pickle
 import sys, os
 sys.path.append("C:\\Program Files\\Lumerical\\v211\\api\\python\\") 
 sys.path.append(os.path.dirname(__file__)) #Current directory
+
 import lumapi
 
 import gdsfactory as gf
@@ -15,7 +16,7 @@ from gplugins.common.utils.get_sparameters_path import (
 )
 from gdsfactory.pdk import get_layer_stack
 
-pyswarms testing
+# pyswarms testing
 import pyswarms as ps
 from gdsfactory.config import PATH
 from functools import partial
@@ -38,7 +39,7 @@ wrk_dir.mkdir(exist_ok=True)
 
 class mmi1x2:
 
-    def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, 
+    def __init__(self, db, wavelength_start,wavelength_stop,center_wavelength=None, bandwidth=None, Width_MMI = 2.5, Length_MMI=None, 
                  mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
         #defaults    
@@ -47,8 +48,10 @@ class mmi1x2:
             port_margin = 1.5,
             port_extension = 5.0,
             mesh_accuracy = 1,
-            wavelength_start = center_wavelength- bandwidth/2,
-            wavelength_stop = center_wavelength+ bandwidth/2,
+            #wavelength_start = center_wavelength- bandwidth/2,
+            #wavelength_stop = center_wavelength+ bandwidth/2,
+            wavelength_start = wavelength_start,
+            wavelength_stop = wavelength_stop,
             wavelength_points = 3,
             xmargin = 1,
             ymargin = 1,
@@ -78,9 +81,12 @@ class mmi1x2:
         self.IL_SR = None
         self.target_CW = None
         self.converged = False
-        self.center_wavelength = center_wavelength
-        self.start_bandwidth = center_wavelength - bandwidth/2
-        self.stop_bandwidth = center_wavelength + bandwidth/2
+        #self.center_wavelength = center_wavelength
+        #self.start_bandwidth = center_wavelength - bandwidth/2
+        #self.stop_bandwidth = center_wavelength + bandwidth/2
+        self.start_bandwidth = None
+        self.stop_bandwidth = None
+        self.center_wavelength = (wavelength_stop + wavelength_start)/2
         self.mean_IL = None
         self.mean_SR = None
         self.IL_center = None
@@ -100,14 +106,14 @@ class mmi1x2:
         print(self.parameters)
         
         #search database for design
-        
+        """
         if self.search_database(): 
             print("Found useful design!")
             print(self.MMIparams) 
             exit() #Do something else generally
 
             #verify design
-            
+        """   
 
     def draw_gds(self):
 
@@ -192,7 +198,7 @@ class mmi1x2:
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
-        # reads the biggest number of MMIID 
+        # reads the biggest number of DeviceID 
         cur = conn.cursor()
         sql_sel_max_query = '''SELECT MAX(DeviceID) FROM DevicesTable'''
         cur.execute(sql_sel_max_query)
@@ -201,7 +207,8 @@ class mmi1x2:
             MMIID = 0
         else: 
             MMIID += 1
-        self.mmiid = MMIID
+        self.MMIparams["mmiid"] = MMIID
+        
 
         # insert .dat file path along with MMI specs into MMI table into a new row
         sql_insert_data_query = '''INSERT INTO DevicesTable(DeviceID, Type, Parameter1, Parameter2, Parameter3, Parameter4,Parameter5, CenterWavelength, StartBandwidth, StopBandwidth, MeanIL, MeanSR, ILCenter, SRCenter,  FilePath, function_call)
@@ -210,21 +217,21 @@ class mmi1x2:
         cur.execute(sql_insert_data_query, (MMIID, "MMI 1x2", f'''Width_MMI = {self.MMIparams["Width_MMI"]} ''', f'''Length_MMI = {self.MMIparams["Length_MMI"]}''', 
                                             f'''Gap_MMI = {self.MMIparams["Gap_MMI"]}''', f'''Taper_Length = {self.MMIparams["Taper_Length"]}''', 
                                             f'''Taper_Width = {self.MMIparams["Taper_Width"]}''', self.center_wavelength*1000, 
-                                            self.start_bandwidth*1000, self.stop_bandwidth*1000, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,  
-                                            self.filepath, f'''c = mmi1x2(db="Devices-simulation.db", center_wavelength=0.0, bandwidth=0.0, Width_MMI=0.0, Length_MMI=0.0, Gap_MMI=0.0, Taper_Length=0.0, Taper_Width=0.0)''' ))
+                                            self.start_bandwidth*1000, self.stop_bandwidth*1000, self.mean_IL, self.mean_SR, self.IL_center, self.SR_center,                                        
+                                            self.filepath, f'''c = mmi1x2(db="Devices-simulation.db", Width_MMI={self.MMIparams["Width_MMI"]}, Length_MMI={self.MMIparams["Length_MMI"]}, Gap_MMI={self.MMIparams["Gap_MMI"]}, Taper_Length={self.MMIparams["Taper_Length"]}, Taper_Width={self.MMIparams["Taper_Width"]})\nc.start_bandwidth={self.start_bandwidth}\nc.stop_bandwidth={self.stop_bandwidth}''' ))
         conn.commit()
         conn.close()
         print("[INFO] : This MMI 1x2 is in the database.") 
-        print("[INFO] : This is entry number:", self.mmiid) 
+        print("[INFO] : This is entry number:", self.MMIparams["mmiid"]) 
         
     def search_database(self):
         # user has to provide a desired center wavelength to search the database
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
 
-        # reads the biggest number of MMIID 
+        # reads the biggest number of DeviceID 
         cur = conn.cursor()
-        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM DevicesTable WHERE {self.start_bandwidth*1000}>StartBandwidth and {self.stop_bandwidth*1000}<StopBandwidth and Type="MMI 1x2"  ORDER BY ABS(CenterWavelength - {self.center_wavelength}) LIMIT 3) AS subquery_table  ORDER BY ILCenter ASC LIMIT 1 ; '''
+        sql_insert_file_query = f''' SELECT * FROM (SELECT * FROM DevicesTable WHERE {self.start_bandwidth*1000}>=StartBandwidth and {self.stop_bandwidth*1000}<=StopBandwidth and Type="MMI 1x2"  ORDER BY ABS(CenterWavelength - {self.center_wavelength*1000}) LIMIT 3) AS subquery_table  ORDER BY ILCenter ASC LIMIT 1 ; '''
         cur.execute(sql_insert_file_query)
         row = cur.fetchall()
         print("[INFO] : Successful Query!")
@@ -235,7 +242,7 @@ class mmi1x2:
     def alter_database_entry(self):
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
-        # reads the biggest number of MMIID 
+        # reads the biggest number of DeviceID 
         cur = conn.cursor()
         sql_edit_query = '''UPDATE DevicesTable SET Parameter1= ?, Parameter2= ?, Parameter3= ?, Parameter4= ?, Parameter5= ?, CenterWavelength= ?, StartBandwidth= ?, StopBandwidth= ?, MeanIL= ?, MeanSR= ?, ILCenter= ?, SRCenter= ?,  FilePath= ? WHERE DeviceID = ?; '''
         cur.execute(sql_edit_query, (f'''Width_MMI = {self.MMIparams["Width_MMI"]} ''', f'''Length_MMI = {self.MMIparams["Length_MMI"]}''', 
@@ -245,7 +252,19 @@ class mmi1x2:
         conn.commit()
         print("[INFO] : Entry modified")
         conn.close()
-
+    def delete_database_entry(self):
+        conn = sqlite3.connect(self.dbpath)
+        print("[INFO] : Successful connection!")
+        # reads the DeviceID of the current mmi1x2 object 
+        cur = conn.cursor()
+        
+        if self.MMIparams["mmiid"] is not None:
+            sql_delete_query = f'''DELETE FROM DevicesTable WHERE DeviceID={self.MMIparams["mmiid"]}; '''
+            cur.execute(sql_delete_query)
+            conn.commit()
+            self.MMIparams["mmiid"] -= 1
+            print("[INFO] : Entry deleted")
+        conn.close()
 
     #runs full simulation and inserts into database
     def runall(self):
@@ -331,16 +350,20 @@ class mmi1x2:
 
 #Test code
 if __name__ == '__main__':
-    db = "Devices-simulation.db" 
+    db = "sims/Devices-simulation.db" 
     
     #running an optimization example
-    c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1, mmiid=10)
-    c.MMIparams["Width_MMI"] = 12.1
-    c.alter_database_entry()
-    print(f'''Width_MMI = {c.MMIparams["Width_MMI"]} ''')
+    c = mmi1x2(db=db, wavelength_start = 1.545, wavelength_stop=1.55 , xmargin=1, ymargin=1, zmargin=1, Width_MMI=3.8, Length_MMI=12.8, Gap_MMI=0.25, Taper_Length=10.0, Taper_Width=1.4)
+    c.start_bandwidth = 1.53
+    c.stop_bandwidth = 1.565
+    
+    c.insert_into_database()
+    c.delete_database_entry()
+    print(c.MMIparams["mmiid"])
+    #print(c.parameters())
 
     #c.search_space() #search_space testing
-    scipyminopt(c)
+    #scipyminopt(c)
 
     #running pyswarm example
     #c = mmi1x2(db=db, center_wavelength=1.5, bandwidth=0.05,xmargin=1, ymargin=1, zmargin=1)

@@ -1,5 +1,5 @@
 class mmi2x2:
-    def __init__(self, db, center_wavelength, bandwidth, Width_MMI = 2.5, Length_MMI=None, 
+    def __init__(self, db, wavelength_start, wavelength_stop, center_wavelength=None, bandwidth=None,start_bandwidth=None,stop_bandwidth=None, Width_MMI = 2.5, Length_MMI=None, 
                  mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
         #defaults    
@@ -8,8 +8,10 @@ class mmi2x2:
             port_margin = 1.5,
             port_extension = 5.0,
             mesh_accuracy = 1,
-            wavelength_start = center_wavelength- bandwidth/2,
-            wavelength_stop = center_wavelength+ bandwidth/2,
+            #wavelength_start = center_wavelength- bandwidth/2,
+            #wavelength_stop = center_wavelength+ bandwidth/2,
+            wavelength_stop = wavelength_stop,
+            wavelength_start = wavelength_start,
             wavelength_points = 3,
             xmargin = 1,
             ymargin = 1,
@@ -39,9 +41,11 @@ class mmi2x2:
         self.IL_SR = None
         self.target_CW = None
         self.converged = False
-        self.center_wavelength = center_wavelength
-        self.start_bandwidth = center_wavelength - bandwidth/2
-        self.stop_bandwidth = center_wavelength + bandwidth/2
+        # self.center_wavelength = center_wavelength
+        self.center_wavelength = (wavelength_stop + wavelength_start ) / 2
+        self.start_bandwidth = start_bandwidth
+        self.stop_bandwidth = stop_bandwidth
+        self.bandwidth = stop_bandwidth - start_bandwidth
         self.mean_IL = None
         self.mean_SR = None
         self.IL_center = None

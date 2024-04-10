@@ -1,4 +1,4 @@
-mentpy
+mentpy>=0.1.0a13
 networkx
 numpy
 matplotlib

@@ -1,1 +1,7 @@
 Corresponds to: https://drive.google.com/drive/folders/1DdeGgsgVn6RTQl_C4pvQDlaUFvlhdn6R?usp=drive_link
+
+Notebook 1: 5_custom_gym_env.ipynb
+From https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html --> https://colab.research.google.com/github/araffin/rl-tutorial-jnrr19/blob/sb3/5_custom_gym_env.ipynb
+
+Notebook 2: custom_gym_env_filter_example.ipynb
+Notebook 1 modified for the filter example given at https://flaport.github.io/sax/examples/02_all_pass_filter.html

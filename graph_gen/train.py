@@ -47,7 +47,8 @@ from torch.nn import functional as F
 #         out = F.embedding(p_ops.reshape(-1).int(), self.embedding)\
 #             .reshape(-1, self.o, self.hs).sum(dim=1)
 #         return out
-NUM_ITERATIONS=10
+
+NUM_ITERATIONS=5
 
 # MantillaNetv1 (Named by Marko - March 10, 2024)
 # MarkoNetv1 (Re-named by Luis - March 11, 2024)
@@ -61,6 +62,7 @@ class MarkoNetv1(nn.Module):
         self.pg_attn = nn.MultiheadAttention(hs, nh, batch_first=True)
         self.g_attn = nn.MultiheadAttention(hs, nh, batch_first=True, add_bias_kv=True)
         self.init_instr = nn.Parameter(torch.randn(hs), requires_grad=True)
+        self.register_buffer('init_graph', torch.ones(self.n**2, self.hs))
         self.f_out = nn.Linear(hs, 1)
 
     def forward(self, p_ops):
@@ -70,8 +72,8 @@ class MarkoNetv1(nn.Module):
             p_embs.append(self.pauli_embedder(torch.nonzero(p_op, as_tuple=False).flatten()).sum(dim=0))
         p_embs = torch.stack(p_embs)[None, :]
         # initialize empty graph
-        init_graph = torch.zeros(self.n**2, self.hs)
-        curr_graph = init_graph
+        # init_graph = torch.zeros(self.n**2, self.hs)
+        curr_graph = self.init_graph
         
         for _ in range(NUM_ITERATIONS):
             p_attn_emb, _ = self.p_attn(p_embs, p_embs, p_embs)
@@ -99,17 +101,43 @@ class MarkoNetv1(nn.Module):
 
 
 if __name__ == "__main__":
-    dt = torch.load('data/dataset.pt')
-    # for our dataset
-    n = dt[0][0].shape[0] # 5: number of nodes
-    o = dt[0][1].shape[1] # 4: 2*number of output qubits
-    m = dt[0][1].shape[0] # 3 here but may vary, is the number of pauli operator the that the graph implements
 
-    hs = 2 # each pauli element is linear combination of 4 embeddings
-    hhs = 4 # attention hidden size
-    nh = 2 # number of attention heads
-    nl = 2 # number of layers
+    from gen_dataset import MBQCDataset
+
+    dt = torch.load('data/dataset.pt') # List[Tuple[input, output]]
+    # for our dataset
+    n = dt[0][1].shape[0] # 5: number of nodes
+    o = dt[0][0].shape[1] # 4: 2*number of output qubits
+    m = dt[0][0].shape[0] # 3 here but may vary, is the number of pauli operator the that the graph implements
+
+    hs = 8 # each pauli element is linear combination of 4 embeddings
+    hhs = 16 # attention hidden size
+    nh = 8 # number of attention heads
+    # nl = 8 # number of layers
     
-    sample = torch.tensor(dt[0][1])
+    sample = torch.tensor(dt[0][0])
     model = MarkoNetv1(o, n, hs, nh)
-    model(sample)
+        
+    print(model(sample).reshape(n,n)) # Output needs to be reshaped to n x n
+
+    import torch.optim as optim
+    from torch.utils.data import DataLoader
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters())
+
+    loader = DataLoader(dt, batch_size=1, shuffle=True)
+
+    num_epochs = 100
+    for epoch in range(num_epochs):  # num_epochs should be defined by you
+        for inputs, targets in loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            targets = targets.reshape(-1,1)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+
+        if (epoch+1) % 10 == 0:
+            print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item()}')
+    

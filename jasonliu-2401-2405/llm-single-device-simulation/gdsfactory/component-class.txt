@@ -1,0 +1,19 @@
+{
+    {
+        function 1: this function simulates a component when there's no device that has desired bandwidth in the SQL database.
+        this function requires the initial user input as a parameter, and don't use this function if the user has already found a device
+        how to call this function: "simulate_component(user_input)"
+    }
+    {
+        function 2: if a device has been found, this function will optimize the Insersion Loss of the device, this function 
+        requires the device as input parameter
+        how to call this function: "scipyminopt(c)"
+    }
+    {
+        function 3: if a device has been found, but the bandwidth is too small, and the user may want this device for a wider wavelength/bandwidth range, 
+        this function requires the device as input parameter
+        how to call this function: "expand_bandwidth(c)"
+    }
+}
+
+

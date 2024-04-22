@@ -1,0 +1,23 @@
+{
+  "title": "Device Designs",
+  "description": "Full text and semantic search on all previous designs.",
+  "databases": {
+    "semantic": {
+      "queries": {
+          "semantic-search": {
+              "hide_sql": false,
+              "sql": "select value from json_each(faiss_search_with_scores('semantic', 'device_embeddings', (select openai_embedding(:query, :openai_api_key)), 3)) where length(coalesce(:query, '')) > 0"
+          }
+      }
+    }
+  },
+  
+  "plugins": {
+      "datasette-faiss": {
+      "tables": [
+      ["semantic", "device_embeddings"]
+      ]
+      }
+  }
+    
+}

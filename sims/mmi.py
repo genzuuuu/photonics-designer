@@ -92,6 +92,7 @@ class mmi1x2:
         #self.stop_bandwidth = center_wavelength + bandwidth/2
         self.start_bandwidth = start_bandwidth
         self.stop_bandwidth = stop_bandwidth
+        self.bandwidth = stop_bandwidth - start_bandwidth
         self.center_wavelength = (wavelength_stop + wavelength_start)/2
         self.mean_IL = None
         self.mean_SR = None

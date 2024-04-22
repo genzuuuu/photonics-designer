@@ -42,7 +42,10 @@ class mmi1x2:
     def __init__(self, db, wavelength_start,wavelength_stop,center_wavelength=None, bandwidth=None, start_bandwidth=None,stop_bandwidth=None, Width_MMI = 2.5, Length_MMI=None, 
                  mmiid=None, Gap_MMI=None, Taper_Length=10, Taper_Width=1, count=0,**kwargs):
         
-        #defaults    
+        """
+        Default set of parameters which define the simulation environment
+        """
+
         self.parameters = dict(
             background_material = "sio2",
             port_margin = 1.5,
@@ -60,11 +63,14 @@ class mmi1x2:
             dirpath = None,
         ) 
 
-        self.dbpath = db
-        self.component = None
+        
+        self.dbpath = db #Database filepath for components
+        self.component = None #Component object for the MMI
         self.layer_stack=get_layer_stack()
         
-        #MMI Params
+        """
+        Parameters for the MMI where mmiid defines the indentification of the MMI within the database
+        """
         self.MMIparams = dict(
             mmiid = mmiid,
             Width_MMI = Width_MMI,
@@ -93,19 +99,19 @@ class mmi1x2:
         self.SR_center = None
         self.filepath = None
 
-        #check if an unacceptable parameter is passed in
+        """Sanity check to ensure simulation settings are legal according to gdsfactory settings"""
         for settings in kwargs:
             if settings not in self.parameters:
                 raise ValueError(
                     f"Invalid setting: {settings})"
                 )   
 
-        #update parameters
+        #update simulation parameters and print it
         self.parameters.update(kwargs)
         self.__dict__.update(self.parameters)
         print(self.parameters)
         
-        #search database for design
+        #TODO search database for design
         """
         if self.search_database(): 
             print("Found useful design!")
@@ -115,6 +121,7 @@ class mmi1x2:
             #verify design
         """   
 
+    """Handles the initialization of the gds from gdsfactory default components, using MMIparams"""
     def draw_gds(self):
 
         #gf.config.rich_output()
@@ -126,16 +133,18 @@ class mmi1x2:
                                                        length_taper=self.MMIparams["Taper_Length"], width_taper=self.MMIparams["Taper_Width"])
 
     def run(self):
-        #Set lumerical session
+        #Sets lumerical session
         s = lumapi.FDTD(hide=True)
 
-        #run FDTD simulations
+        #run FDTD simulations through a gdsfacatory helper function
         a, self.filepath = WL(self.component, run=True, session=s,  count=self.count, **self.parameters)
-        self.count += 1
+        self.count += 1 #Do not remove as of right now, count allows for multiple simulations to run
         
         # get S parameters from the simulation
         self.sparam = s.getsweepresult("s-parameter sweep", "S parameters")
         
+
+    """Calculates the splitting ratio and insertion loss from sparam matrix, to be run after the simulation has been run"""
     def splitting_ratio_insertion_loss(self):
         # num_simulation: number of simulations
         # return: insertion_loss, splitting_ratio
@@ -154,6 +163,7 @@ class mmi1x2:
             # output: {'insertion loss': [[wavelength,...], [wavelength,...]...], 'splitting ratio':[[wavelength,...], [wavelength,...]...]}
         self.IL_SR = data_1
 
+    """Update class with values calculated from splitting_ratio_insertion_loss values"""
     def updateClass(self):
         num_simulation = self.parameters['wavelength_points']
         # find center wavelength
@@ -193,7 +203,7 @@ class mmi1x2:
             else:
                 self.mean_SR = sum(data_subset_SR)/len(data_subset_SR)    
 
-        
+    """Insert component intro database"""
     def insert_into_database(self): 
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
@@ -224,6 +234,7 @@ class mmi1x2:
         print("[INFO] : This MMI 1x2 is in the database.") 
         print("[INFO] : This is entry number:", self.MMIparams["mmiid"]) 
         
+    """Search database for component given initial parameters"""
     def search_database(self):
         # user has to provide a desired center wavelength to search the database
         conn = sqlite3.connect(self.dbpath)
@@ -239,6 +250,7 @@ class mmi1x2:
         print(row)
         conn.close()
 
+    """Update existing database entry with component"""
     def alter_database_entry(self):
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
@@ -252,6 +264,8 @@ class mmi1x2:
         conn.commit()
         print("[INFO] : Entry modified")
         conn.close()
+
+    """Delete existing database entry with same mmiid"""
     def delete_database_entry(self):
         conn = sqlite3.connect(self.dbpath)
         print("[INFO] : Successful connection!")
@@ -266,7 +280,7 @@ class mmi1x2:
             print("[INFO] : Entry deleted")
         conn.close()
 
-    #runs full simulation and inserts into database
+    """Run entire workflow once and insert final component into the database"""
     def runall(self):
         self.draw_gds()
         self.run()
@@ -274,11 +288,11 @@ class mmi1x2:
         self.updateClass()
         self.insert_into_database()
 
-    #searches for an accurate design and verifies it afterwards
+    """Iteratively simulates to find an MMI with the lowest insertion loss value"""
     def search_space(self):
-        guess_length = (4*3.89*(self.MMIparams["Width_MMI"]**2)*1e-6)/(12*self.center_wavelength)
+        guess_length = (4*3.89*(self.MMIparams["Width_MMI"]**2))/(12*self.center_wavelength)
         print(guess_length)
-        final = scipyminopt(self.component, guess=(guess_length,0.25))
+        final = scipyminopt(self, guess=(guess_length,0.25))
         print(final)
 
         self.MMIparams["Length_MMI"] = final["x"][0]
@@ -313,8 +327,8 @@ class mmi1x2:
 
         #temporary fix to None and small values
         if (self.mean_IL == None): return 1e6
-        if (self.mean_IL < -0.5): return 1e6
-        return self.mean_IL
+        if (self.mean_IL > 0): return 1e6
+        return abs(self.mean_IL)
 
     # ## Define the trainable function for the PSO optimization
     def fitness_function_swarm(self, x):
@@ -343,8 +357,8 @@ class mmi1x2:
 
             #temporary fix to None and highly negative solutions
             if (self.mean_IL == None): loss_x = 1e6
-            elif (self.mean_IL < -0.5): loss_x = 1e6
-            else: loss_x = self.mean_IL
+            elif (self.mean_IL > 0): loss_x = 1e6
+            else: loss_x = abs(self.mean_IL)
             loss_arr.append(abs(loss_x)) #trims off negative numbers
 
         return np.asarray(loss_arr)
@@ -355,9 +369,10 @@ if __name__ == '__main__':
     db = "sims/Devices-simulation.db" 
     
     #running an optimization example
+    #initialize class
     c = mmi1x2(db=db, wavelength_start = 1.53, wavelength_stop=1.565,start_bandwidth = 1.53, stop_bandwidth = 1.565, xmargin=1, ymargin=1, zmargin=1, Width_MMI=3.8, Length_MMI=12.8, Gap_MMI=0.25, Taper_Length=10.0, Taper_Width=1.4)
 
-    c.insert_into_database()
+    #c.insert_into_database()
     #c.delete_database_entry()
     #print(c.parameters())
 

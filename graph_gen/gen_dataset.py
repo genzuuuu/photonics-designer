@@ -44,7 +44,7 @@ class MBQCDataset(Dataset):
 
 if __name__ == "__main__":
     # Create dataset
-    dataset = MBQCDataset(5, [0,1], [3,4])
+    dataset = MBQCDataset(4, [0,1], [2,3])
 
     # Save the dataset
     torch.save(dataset, 'data/dataset.pt')

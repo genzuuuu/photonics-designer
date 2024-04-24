@@ -36,7 +36,7 @@ def create_graph_data(lie_alg_matrix, adj_matrix, max_n, max_m):
 
 if __name__ == "__main__":
 
-    from gen_dataset import MBQCDataset
+    from graph_gen.ml.gen_dataset import MBQCDataset
 
     dt = torch.load('data/dataset.pt')
 

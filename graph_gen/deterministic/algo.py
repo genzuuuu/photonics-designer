@@ -1,7 +1,6 @@
 import mentpy as mp
 
-
-def main(pauli_op):
+def generate_circuit(pauli_op):
 
     circuit = None
     for op in pauli_op:
@@ -16,7 +15,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     op = mp.PauliOp('XIZ;IZX;ZXX')
-    circuit = main(op)
+    circuit = generate_circuit(op)
     mp.draw(circuit, figsize=(10, 10))  
     plt.show()
 

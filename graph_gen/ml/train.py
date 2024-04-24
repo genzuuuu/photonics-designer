@@ -110,7 +110,7 @@ if __name__ == "__main__":
     argparser.add_argument('--plot')
     args = argparser.parse_args()
 
-    from gen_dataset import MBQCDataset
+    from graph_gen.ml.gen_dataset import MBQCDataset
 
     dt = torch.load('data/dataset.pt') # List[Tuple[input, output]]
     # for our dataset
@@ -165,11 +165,11 @@ if __name__ == "__main__":
     output = model(input).reshape(n,n)
 
     # # use output as probability and sample from it
-    # output = torch.bernoulli(output)
+    output = torch.bernoulli(output)
 
     # # symmetrize the output
-    # output = output + output.T
-    # output[output>1] = 1
+    output = output + output.T
+    output[output>1] = 1
 
 
     print("Input: ", input)

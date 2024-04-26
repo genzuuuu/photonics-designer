@@ -2,6 +2,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+import numpy as np
 
 
 # class PauliEmbedder(nn.Module):
@@ -48,7 +49,7 @@ from torch.nn import functional as F
 #             .reshape(-1, self.o, self.hs).sum(dim=1)
 #         return out
 
-NUM_ITERATIONS=5
+NUM_ITERATIONS=2
 
 # MantillaNetv1 (Named by Marko - March 10, 2024)
 # MarkoNetv1 (Re-named by Luis - March 11, 2024)
@@ -58,11 +59,12 @@ class MarkoNetv1(nn.Module):
         # self.pauli_embedder = PauliEmbedder(o, hs)
         self.o, self.n, self.hs, self.nh = o, n, hs, nh
         self.pauli_embedder = nn.Embedding(o, hs) 
-        self.p_attn = nn.MultiheadAttention(hs, nh, batch_first=True)
-        self.pg_attn = nn.MultiheadAttention(hs, nh, batch_first=True)
+        self.p_attn = nn.MultiheadAttention(hs, nh, batch_first=True, add_bias_kv=True)
+        self.pg_attn = nn.MultiheadAttention(hs, nh, batch_first=True, add_bias_kv=True)
         self.g_attn = nn.MultiheadAttention(hs, nh, batch_first=True, add_bias_kv=True)
         self.init_instr = nn.Parameter(torch.randn(hs), requires_grad=True)
-        self.register_buffer('init_graph', torch.ones(self.n**2, self.hs))
+        # self.register_buffer('init_graph', torch.ones(self.n**2, self.hs))
+        self.init_graph = nn.Parameter(torch.randn(self.n**2, self.hs), requires_grad=True)
         self.f_out = nn.Linear(hs, 1)
 
     def forward(self, p_ops):
@@ -102,7 +104,13 @@ class MarkoNetv1(nn.Module):
 
 if __name__ == "__main__":
 
-    from gen_dataset import MBQCDataset
+    import argparse
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--plot')
+    args = argparser.parse_args()
+
+    from graph_gen.ml.gen_dataset import MBQCDataset
 
     dt = torch.load('data/dataset.pt') # List[Tuple[input, output]]
     # for our dataset
@@ -110,34 +118,68 @@ if __name__ == "__main__":
     o = dt[0][0].shape[1] # 4: 2*number of output qubits
     m = dt[0][0].shape[0] # 3 here but may vary, is the number of pauli operator the that the graph implements
 
-    hs = 8 # each pauli element is linear combination of 4 embeddings
-    hhs = 16 # attention hidden size
-    nh = 8 # number of attention heads
+    hs = 4 # each pauli element is linear combination of 4 embeddings
+    hhs = 4 # attention hidden size
+    nh = 4 # number of attention heads
     # nl = 8 # number of layers
     
     sample = torch.tensor(dt[0][0])
     model = MarkoNetv1(o, n, hs, nh)
         
-    print(model(sample).reshape(n,n)) # Output needs to be reshaped to n x n
+    print("Sample input: ", dt[0][0])
+    print("Sample output: ", dt[0][1])
+    print("Sample model output: ", model(sample).reshape(n,n)) # Output needs to be reshaped to n x n
 
     import torch.optim as optim
     from torch.utils.data import DataLoader
 
     criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters())
 
     loader = DataLoader(dt, batch_size=1, shuffle=True)
 
-    num_epochs = 100
+    loss_hist = []
+
+    num_epochs = 1000
     for epoch in range(num_epochs):  # num_epochs should be defined by you
         for inputs, targets in loader:
             optimizer.zero_grad()
-            outputs = model(inputs)
-            targets = targets.reshape(-1,1)
+            outputs = model(inputs).reshape(targets.shape)
+            print(inputs.shape, outputs.shape, targets.shape)
+            outputs = (outputs.T + outputs).reshape(-1)
+            targets = targets.reshape(-1)
             loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
+            loss_hist.append(loss.item())
 
-        if (epoch+1) % 10 == 0:
+        if (epoch+1) % 100 == 0:
             print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item()}')
     
+    print("Saving model...")
+    torch.save(model.state_dict(), 'model.pth')
+
+    # Generate output from an input
+    input = torch.tensor(dt[0][0])
+    output = model(input).reshape(n,n)
+
+    # # use output as probability and sample from it
+    output = torch.bernoulli(output)
+
+    # # symmetrize the output
+    output = output + output.T
+    output[output>1] = 1
+
+
+    print("Input: ", input)
+    print("Output: ", output)
+    print("Expected output: ", dt[0][1])
+
+    if args.plot:
+        import matplotlib.pyplot as plt
+
+        plt.plot(np.arange(len(loss_hist)), loss_hist)
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.savefig('loss.png')

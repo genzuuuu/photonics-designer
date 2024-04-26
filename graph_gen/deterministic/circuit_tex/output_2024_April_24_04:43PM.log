@@ -1,0 +1,147 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2024.2.29)  24 APR 2024 16:44
+entering extended mode
+ restricted \write18 enabled.
+ file:line:error style messages enabled.
+ %&-line parsing enabled.
+**/Users/luismantilla/Desktop/UofT/2024-1/Projects/PhotonicEng/photonics-designer/graph_gen/deterministic/circuit_tex/output_2024_April_24_04:43PM
+(/Users/luismantilla/Desktop/UofT/2024-1/Projects/PhotonicEng/photonics-designer/graph_gen/deterministic/circuit_tex/output_2024_April_24_04:43PM.tex
+LaTeX2e <2022-11-01> patch level 1
+L3 programming layer <2023-02-22> (/usr/local/texlive/2023/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2022/07/02 v1.4n Standard LaTeX document class
+(/usr/local/texlive/2023/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2022/07/02 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count185
+\c@section=\count186
+\c@subsection=\count187
+\c@subsubsection=\count188
+\c@paragraph=\count189
+\c@subparagraph=\count190
+\c@figure=\count191
+\c@table=\count192
+\abovecaptionskip=\skip48
+\belowcaptionskip=\skip49
+\bibindent=\dimen140
+) (/usr/local/texlive/2023/texmf-dist/tex/latex/qcircuit/qcircuit.sty
+Package: qcircuit 2018/08/14
+ (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xy.sty (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xy.tex Bootstrap'ing: catcodes, docmode, (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xyrecat.tex) (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xyidioms.tex)
+
+ Xy-pic version 3.8.9 <2013/10/06>
+ Copyright (c) 1991-2013 by Kristoffer H. Rose <krisrose@tug.org> and others
+ Xy-pic is free software: see the User's Guide for details.
+
+Loading kernel: messages; fonts; allocations: state,
+\X@c=\dimen141
+\Y@c=\dimen142
+\U@c=\dimen143
+\D@c=\dimen144
+\L@c=\dimen145
+\R@c=\dimen146
+\Edge@c=\toks16
+\X@p=\dimen147
+\Y@p=\dimen148
+\U@p=\dimen149
+\D@p=\dimen150
+\L@p=\dimen151
+\R@p=\dimen152
+\Edge@p=\toks17
+\X@origin=\dimen153
+\Y@origin=\dimen154
+\X@xbase=\dimen155
+\Y@xbase=\dimen156
+\X@ybase=\dimen157
+\Y@ybase=\dimen158
+\X@min=\dimen159
+\Y@min=\dimen160
+\X@max=\dimen161
+\Y@max=\dimen162
+\lastobjectbox@=\box51
+\zerodotbox@=\box52
+\almostz@=\dimen163
+ direction,
+\d@X=\dimen164
+\d@Y=\dimen165
+\K@=\count193
+\KK@=\count194
+\Direction=\count195
+\K@dXdY=\dimen166
+\K@dYdX=\dimen167
+\xyread@=\read2
+\xywrite@=\write3
+\csp@=\count196
+\quotPTK@=\dimen168
+ utility macros; pictures: \xy, positions,
+\swaptoks@@=\toks18
+\connectobjectbox@@=\box53
+ objects,
+\styletoks@=\toks19
+ decorations; kernel objects: directionals, circles, text; options; algorithms: directions, edges, connections;  Xy-pic loaded) (/usr/local/texlive/2023/texmf-dist/tex/generic/iftex/ifpdf.sty
+Package: ifpdf 2019/10/25 v3.4 ifpdf legacy package. Use iftex instead.
+ (/usr/local/texlive/2023/texmf-dist/tex/generic/iftex/iftex.sty
+Package: iftex 2022/02/03 v1.0f TeX engine tests
+))
+Package: xy 2013/10/06 Xy-pic version 3.8.9
+ (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xypdf.tex  Xy-pic option: PDF driver v.1.7 loaded)) (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xymatrix.tex  Xy-pic option: Matrix feature v.3.14
+\Row=\count197
+\Col=\count198
+\queue@=\toks20
+\queue@@=\toks21
+\qcount@=\count199
+\qcount@@=\count266
+\matrixsize@=\count267
+ loaded) (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xyframe.tex  Xy-pic option: Frame and Bracket extension v.3.14 loaded) Xy-pic pdf driver: `frame' extension support (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xypdf-fr.tex (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xycurve.tex  Xy-pic option: Curve and Spline extension v.3.12 curve,
+\crv@cnt@=\count268
+\crvpts@=\toks22
+\splinebox@=\box54
+\splineval@=\dimen169
+\splinedepth@=\dimen170
+\splinetol@=\dimen171
+\splinelength@=\dimen172
+ circles,
+\L@=\dimen173
+ loaded) Xy-pic pdf driver: `curve' extension support (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xypdf-cu.tex loaded) loaded) (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xyarrow.tex  Xy-pic option: Arrow and Path feature v.3.9 path, \ar, loaded) (/usr/local/texlive/2023/texmf-dist/tex/generic/xypic/xyarc.tex  Xy-pic option: Circle, Ellipse, Arc feature v.3.8 circles, ellipses, elliptical arcs, loaded)) (/usr/local/texlive/2023/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count269
+\l__pdf_internal_box=\box55
+)
+No file output_2024_April_24_04:43PM.aux.
+\openout1 = `output_2024_April_24_04:43PM.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 4.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 4.
+Package xypdf Info: Line width: 0.39998pt on input line 4.
+<xymatrix 5x8 1490> [1
+
+{/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (./output_2024_April_24_04:43PM.aux) ) 
+Here is how much of TeX's memory you used:
+ 3095 strings out of 476025
+ 40977 string characters out of 5790017
+ 1866388 words of memory out of 5000000
+ 23579 multiletter control sequences out of 15000+600000
+ 513160 words of font info for 37 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 72i,13n,76p,1551b,409s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb>
+Output written on output_2024_April_24_04:43PM.pdf (1 page, 9818 bytes).
+PDF statistics:
+ 13 PDF objects out of 1000 (max. 8388607)
+ 7 compressed objects within 1 object stream
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+

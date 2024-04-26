@@ -45,7 +45,7 @@ class genericsim:
         #TODO check for correctness of simparams  
         self.parameters = SimParams
 
-        self.dbpath = db
+        self.dbpath = "MMIDB.db"
         self.component = None
         self.layer_stack=get_layer_stack()
         
@@ -189,9 +189,8 @@ if __name__ == '__main__':
         zmargin = 1,
         overwrite=False,
         dirpath = None,
-    ) 
+    )
 
-    #TODO add objective function
-    g = genericsim(ParamName="mmi1x2", ComponentParams=MMIparams, ObjectiveFunction=IL, SimParams=parameters, db = db, 
+    g = genericsim(ParamName="mmi1x2", ComponentParams=MMIparams, ObjectiveFunction=IL, SimParams=parameters, 
                    center_wavelength=1.5, bandwidth=0.05, xmargin=1,ymargin=1,zmargin=1)
 

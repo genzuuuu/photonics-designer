@@ -19,7 +19,7 @@ class MBQCDataset(Dataset):
             if node_data['mbqc_circuit'] is not None:
                 try:
                     # Calculate the Lie algebra
-                    lie_algebra = mp.utils.lie_algebra.calculate_gens_lie_algebra(node_data['mbqc_circuit'])
+                    lie_algebra = mp.utils.lie_algebra.calculate_gens(node_data['mbqc_circuit'])
                     
                     # Append the adjacency matrix and the corresponding Lie algebra matrix to the dataset
                     adjacency_matrix = nx.adjacency_matrix(node_data['mbqc_circuit'].graph).todense()
@@ -44,7 +44,7 @@ class MBQCDataset(Dataset):
 
 if __name__ == "__main__":
     # Create dataset
-    dataset = MBQCDataset(5, [0,1], [3,4])
+    dataset = MBQCDataset(4, [0,1], [2,3])
 
     # Save the dataset
     torch.save(dataset, 'data/dataset.pt')

@@ -8,7 +8,7 @@ def ScipyOptMin(component, guess):
     print("Starting minimization")
     t0 = time.time()
     res = scipy.optimize.minimize(component.fitness_function_scipy, guess, bounds=((0,guess[0]),(0,guess[1])),method='COBYLA', options={"maxiter": 30})
-    component.insert_into_database()
+    #component.insert_into_database()
     print(f"final res: {res}")
     print(f"Final time: {time.time() - t0}")
 
